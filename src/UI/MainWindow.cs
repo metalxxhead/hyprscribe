@@ -8,7 +8,7 @@ namespace HyprScribe.UI
     public class MainWindow : Window
     {
         public Notebook notebook;
-        public int tabCounter = 1;
+        public TabManager tabManager;
         public Button plusButton; // headerbar button to add new notebook page
 
 
@@ -49,6 +49,8 @@ namespace HyprScribe.UI
             headerBar.PackEnd(plusButton);
 
             ShowAll();
+
+            tabManager = new TabManager();
 
         }
 

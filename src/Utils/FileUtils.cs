@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Reflection.Emit;
+using Gtk;
 
 namespace HyprScribe.Utils {
 	public static class FileUtils {
@@ -15,6 +17,7 @@ namespace HyprScribe.Utils {
 		public static void WriteFile(string path, string content) {
 			File.WriteAllText(path, content);
 		}
+
 	}
 }
 
