@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Principal;
 using Gtk;
+using HyprScribe.Logic;
 using HyprScribe.Models;
 using HyprScribe.UI;
+using HyprScribe.Utils;
 using Internal;
 using Microsoft.Win32.SafeHandles;
 
@@ -79,15 +81,66 @@ namespace HyprScribe.Handlers
             notebook.CurrentPage = page;
 
             string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
-            window.tabManager.AddTab("Tab " + index, fileSavePath);
+            window.tabManager.AddTab("Tab " + index, page, fileSavePath);
+
+            CoreLogic.CreateBlankFileIfNotExists(fileSavePath);
+
+            window.tabManager.SaveTabsToDb();
 
              textView.KeyReleaseEvent += (sender, args) =>
             {
                 File.WriteAllText(fileSavePath, textView.Buffer.Text);
             };
 
+            
+
+            //Logic.CoreLogic.writeTabInfoFile(window);
+
+            window.ShowAll();
+
+            notebook.CurrentPage = page;
+        }
+
+
+
+        internal static void AddKnownTabFromDB(Notebook notebook, MainWindow window, TabInfo tabData)
+        {
+            var textView = new TextView
+            {
+                WrapMode = WrapMode.WordChar
+            };
+
+            var buffer = textView.Buffer;
+            buffer.Text = FileUtils.ReadFile(tabData.FilePath);
+
+            var scroller = new ScrolledWindow();
+            scroller.Add(textView);
+
+            //int index = GenerateNewIndex(notebook, window);
+
+            var tabLabel = CreateTabLabel(notebook, tabData.TabLabel, window);
+
+            int page = notebook.AppendPage(scroller, tabLabel);
+            notebook.SetTabReorderable(scroller, true);
+            notebook.CurrentPage = page;
+
+            //string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
+            //window.tabManager.AddTab("Tab " + index, page, fileSavePath);
+
+            //CoreLogic.CreateBlankFileIfNotExists(fileSavePath);
+
+            //window.tabManager.SaveTabsToDb();
+
+             textView.KeyReleaseEvent += (sender, args) =>
+            {
+                File.WriteAllText(tabData.FilePath, textView.Buffer.Text);
+            };
+
+            //Logic.CoreLogic.writeTabInfoFile(window);
+
             window.ShowAll();
         }
+
 
 
 

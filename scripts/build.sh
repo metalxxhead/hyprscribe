@@ -9,6 +9,8 @@ mcs \
     -target:exe \
     -out:build/HyprScribe.exe \
     -r:lib/Newtonsoft.Json.dll \
+    -r:Mono.Data.Sqlite \
+    -r:System.Data \
     src/Program.cs \
     $(find src/UI -name "*.cs") \
     $(find src/Handlers -name "*.cs") \

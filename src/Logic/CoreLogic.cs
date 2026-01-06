@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.IO;
 using Internal;
 using System.Reflection;
+using HyprScribe.UI;
+using HyprScribe.Models;
 
 namespace HyprScribe.Logic 
 {
@@ -47,6 +49,28 @@ namespace HyprScribe.Logic
 		}
 
 
+		public static List<string> GetFilePaths(string directoryPath)
+		{
+			List<string> filePaths = new List<string>(); 
+
+			if (Directory.Exists(directoryPath))  
+			{  
+				string[] files = Directory.GetFiles(directoryPath);
+
+				foreach (string file in files)  
+				{  
+					filePaths.Add(file);  
+				}  
+			}  
+			else  
+			{  
+				Console.WriteLine("Directory does not exist.");  
+			}
+
+			return filePaths;  
+		}
+
+
 		public static List<string> GetFilenamesFromDirectories(string[] directories)
 		{
 			List<string> filenames = new List<string>();
@@ -63,6 +87,48 @@ namespace HyprScribe.Logic
 			}
 
 			return filenames;
+		}
+
+
+		public static string getUserDirectory()
+		{
+			string exePath = Assembly.GetEntryAssembly().Location;
+			string buildDir = Path.GetDirectoryName(exePath);
+			string parentDir = Directory.GetParent(buildDir).FullName;
+			string userDir = Path.Combine(parentDir, "user_data");
+
+			Directory.CreateDirectory(userDir);
+
+			string current_tabs_path = Path.Combine(userDir, "current_tabs");
+
+			Directory.CreateDirectory(current_tabs_path);
+
+			string archived_tabs_path = Path.Combine(userDir, "archived_tabs");
+
+			Directory.CreateDirectory(archived_tabs_path);
+
+			return userDir;
+		}
+
+
+		public static string getCurrentTabsDirectory()
+		{
+			string exePath = Assembly.GetEntryAssembly().Location;
+			string buildDir = Path.GetDirectoryName(exePath);
+			string parentDir = Directory.GetParent(buildDir).FullName;
+			string userDir = Path.Combine(parentDir, "user_data");
+
+			Directory.CreateDirectory(userDir);
+
+			string current_tabs_path = Path.Combine(userDir, "current_tabs");
+
+			Directory.CreateDirectory(current_tabs_path);
+
+			string archived_tabs_path = Path.Combine(userDir, "archived_tabs");
+
+			Directory.CreateDirectory(archived_tabs_path);
+
+			return current_tabs_path;
 		}
 
 
@@ -89,6 +155,31 @@ namespace HyprScribe.Logic
             };
 
 			return Path.Combine(current_tabs_path, GenerateUniqueRandomString(GetFilenamesFromDirectories(directories))) + ".txt";
+		}
+
+
+		internal static void writeTabInfoFile(MainWindow window)
+		{
+			string filePath = Path.Combine(getUserDirectory(), "tabinfo.txt");
+
+			List<TabInfo> tabFilePairs = window.tabManager.GetAllTabs();
+
+			using (StreamWriter writer = new StreamWriter(filePath))
+			{
+				foreach (var item in tabFilePairs)
+				{
+					writer.WriteLine($"{item.TabLabel},{item.FilePath}");
+				}
+			}
+		}
+
+
+		public static void CreateBlankFileIfNotExists(string filePath)
+		{
+			if (!File.Exists(filePath))
+			{
+				File.Create(filePath).Close();
+			}
 		}
 
 

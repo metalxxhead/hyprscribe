@@ -71,9 +71,14 @@ logs/
 *.log
 
 ############################################
-# Optional: SQLite / local data (uncomment if desired)
+# SQLite / local data 
 ############################################
 # *.db
 # *.sqlite
 # *.sqlite3
 
+
+############################################
+# User data folder
+############################################
+user_data/
