@@ -4,6 +4,7 @@ using System.Security.Principal;
 using Gtk;
 using HyprScribe.Models;
 using HyprScribe.UI;
+using Internal;
 
 namespace HyprScribe.Handlers 
 {
@@ -45,26 +46,19 @@ namespace HyprScribe.Handlers
 
         public static void RemoveTab(Notebook notebook, string title, MainWindow window)
         {
-            bool foundTab = false;
-            int indexToRemove = -1;
+  			for (int i = 0; i < notebook.NPages; i++)
+			{
 
-            Console.WriteLine("Removing \""+ title + "\"");
+				var tabLabelBox = notebook.GetTabLabel(notebook.GetNthPage(i));
+				var tabTitleLabel = (Gtk.Label)((Container)tabLabelBox).Children[0];
+				var labelText = tabTitleLabel.LabelProp;
 
-            foreach (var tab in window.tabManager.GetAllTabs())
-            {
-                if (tab.TabLabel == title)
-                {
-                    notebook.RemovePage(tab.TabIndex);
-                    foundTab = true;
-                    indexToRemove = tab.TabIndex;
-                    break;
-                }
-            }
-
-            if (foundTab)
-            {
-                window.tabManager.RemoveTab(indexToRemove);
-            }
+				if (title == labelText)
+				{
+					notebook.RemovePage(i);
+                    window.tabManager.RemoveTabFromList(labelText);
+				}
+			} 
         }
 
 
@@ -88,7 +82,7 @@ namespace HyprScribe.Handlers
             notebook.SetTabReorderable(scroller, true);
             notebook.CurrentPage = page;
 
-            window.tabManager.AddTab(index, "Tab " + index, "");
+            window.tabManager.AddTab("Tab " + index, "");
 
             window.ShowAll();
 
@@ -102,15 +96,10 @@ namespace HyprScribe.Handlers
 
             List<string> tabNames = new List<string>();
 
-            Console.WriteLine("BEGIN");
-
             foreach (var tab in window.tabManager.GetAllTabs())
             {
                 tabNames.Add(tab.TabLabel);
-                Console.WriteLine(tab.TabLabel);
             }
-
-            Console.WriteLine("END");
 
             while(tabNames.Contains("Tab " + index))
             {

@@ -22,21 +22,26 @@ namespace HyprScribe.Models
         }
 
         // Method to add a new tab
-        public void AddTab(int tabIndex, string tabLabel, string filePath)
+        public void AddTab(string tabLabel, string filePath)
         {
-            var tabInfo = new TabInfo(tabIndex, tabLabel, filePath);
+            var tabInfo = new TabInfo(tabLabel, filePath);
             _tabs.Add(tabInfo);
         }
 
-        // Method to remove a tab by its index
-        public void RemoveTab(int tabIndex)
+
+        public void RemoveTabFromList(string tabLabel)
         {
-            var tabToRemove = _tabs.Find(t => t.TabIndex == tabIndex);
-            if (tabToRemove != null)
+            for (int x = 0; x < _tabs.Count; x++)
             {
-                _tabs.Remove(tabToRemove);
+                if (_tabs[x].TabLabel == tabLabel)
+                {
+                    _tabs.RemoveAt(x);
+                    break;
+                }
             }
         }
+
+
 
         // Method to get all tabs
         public List<TabInfo> GetAllTabs()
@@ -48,9 +53,6 @@ namespace HyprScribe.Models
 
 	public class TabInfo
 	{
-		// Property to hold the tab index
-		public int TabIndex { get; set; }
-
 		// Property to hold the tab label
 		public string TabLabel { get; set; }
 
@@ -58,9 +60,8 @@ namespace HyprScribe.Models
 		public string FilePath { get; set; }
 
 		// Constructor to initialize the TabInfo object
-		public TabInfo(int tabIndex, string tabLabel, string filePath)
+		public TabInfo(string tabLabel, string filePath)
 		{
-			TabIndex = tabIndex;
 			TabLabel = tabLabel;
 			FilePath = filePath;
 		}
