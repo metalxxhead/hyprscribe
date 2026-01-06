@@ -1,21 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Security.Principal;
 using Gtk;
 using HyprScribe.Models;
 using HyprScribe.UI;
 using Internal;
+using Microsoft.Win32.SafeHandles;
 
 namespace HyprScribe.Handlers 
 {
     public static class MainHandlers 
     {
-
-        public static int CountRealTabs(Notebook notebook)
-        {
-            return notebook.NPages;
-        }
-
 
         public static Widget CreateTabLabel(Notebook notebook, string title, MainWindow window)
         {
@@ -44,7 +40,7 @@ namespace HyprScribe.Handlers
         }
 
 
-        public static void RemoveTab(Notebook notebook, string title, MainWindow window)
+        internal static void RemoveTab(Notebook notebook, string title, MainWindow window)
         {
   			for (int i = 0; i < notebook.NPages; i++)
 			{
@@ -64,7 +60,7 @@ namespace HyprScribe.Handlers
 
 
 
-        public static void AddEditorTab(Notebook notebook, MainWindow window)
+        internal static void AddEditorTab(Notebook notebook, MainWindow window)
         {
             var textView = new TextView
             {
@@ -82,10 +78,15 @@ namespace HyprScribe.Handlers
             notebook.SetTabReorderable(scroller, true);
             notebook.CurrentPage = page;
 
-            window.tabManager.AddTab("Tab " + index, "");
+            string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
+            window.tabManager.AddTab("Tab " + index, fileSavePath);
+
+             textView.KeyReleaseEvent += (sender, args) =>
+            {
+                File.WriteAllText(fileSavePath, textView.Buffer.Text);
+            };
 
             window.ShowAll();
-
         }
 
 
