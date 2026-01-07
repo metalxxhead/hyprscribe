@@ -90,6 +90,29 @@ namespace HyprScribe.Logic
 		}
 
 
+		public static string GetConfigDirectory()
+		{
+			string exePath = Assembly.GetEntryAssembly().Location;
+			string buildDir = Path.GetDirectoryName(exePath);
+			string parentDir = Directory.GetParent(buildDir).FullName;
+			string userDir = Path.Combine(parentDir, "user_data");
+			string configDir = Path.Combine(parentDir, "config");
+
+			Directory.CreateDirectory(userDir);
+
+			string current_tabs_path = Path.Combine(userDir, "current_tabs");
+
+			Directory.CreateDirectory(current_tabs_path);
+
+			string archived_tabs_path = Path.Combine(userDir, "archived_tabs");
+
+			Directory.CreateDirectory(archived_tabs_path);
+
+			return configDir;
+		}
+
+
+
 		public static string getUserDirectory()
 		{
 			string exePath = Assembly.GetEntryAssembly().Location;

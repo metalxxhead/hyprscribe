@@ -1,6 +1,5 @@
    using System;
    using Gtk;
-   using HyprScribe.Config;
    using HyprScribe.Models;
 
    namespace HyprScribe
@@ -10,11 +9,10 @@
 	{
 	    static void Main(string[] args)
 	    {
-			var cfg = ConfigManager.LoadConfig();
 
 			Application.Init();
 
-			var win = new UI.MainWindow(cfg);
+			var win = new UI.MainWindow();
 			win.ShowAll();
 
 			Application.Run();

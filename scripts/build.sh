@@ -8,7 +8,6 @@ mcs \
     -pkg:gtk-sharp-3.0 \
     -target:exe \
     -out:build/HyprScribe.exe \
-    -r:lib/Newtonsoft.Json.dll \
     -r:Mono.Data.Sqlite \
     -r:System.Data \
     src/Program.cs \
