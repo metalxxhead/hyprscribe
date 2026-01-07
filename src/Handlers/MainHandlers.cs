@@ -250,6 +250,68 @@ namespace HyprScribe.Handlers
 			
 		}
 
+
+        internal static void saveTabBufferToFile(Notebook notebook, MainWindow window)
+        {
+
+
+            int activeIndex = notebook.CurrentPage;
+            var scrolledWinTemp = notebook.GetNthPage(activeIndex);
+
+            ScrolledWindow scrolledWindow = scrolledWinTemp as ScrolledWindow;
+
+            if (scrolledWindow != null)
+            {
+
+                TextView textView = scrolledWindow.Child as TextView;
+                
+                if (textView != null)
+                {
+                    string textContent = textView.Buffer.Text;
+
+                    var dialog = new Gtk.FileChooserDialog(
+                        "Save File",
+                        window,
+                        Gtk.FileChooserAction.Save,
+                        "_Cancel", Gtk.ResponseType.Cancel,
+                        "_Save", Gtk.ResponseType.Accept
+                    );
+
+                    // Optional defaults
+                    dialog.DoOverwriteConfirmation = true;
+                    dialog.CurrentName = "document.txt";
+
+                    if (dialog.Run() == (int)Gtk.ResponseType.Accept)
+                    {
+                        string filePath = dialog.Filename;
+                        File.WriteAllText(filePath, textContent);
+                    }
+                    else
+                    {
+                        Console.WriteLine("File save operation cancelled.");
+                    }
+
+                    // Destroy the dialog
+                    dialog.Destroy();
+
+                }
+                else
+                {
+                    Console.WriteLine("TextView not found inside the ScrolledWindow.");
+                }
+
+            }
+            
+            else
+            {
+                Console.WriteLine("ScrolledWindow not found on the current page.");
+            }
+
+        }
+
+
+
+
     }
 
 }

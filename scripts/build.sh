@@ -2,7 +2,7 @@
 
 cd "$(dirname "$0")/.."
 
-echo "Building HyprScribe..."
+echo "Building HyprScribe"
 
 mcs \
     -pkg:gtk-sharp-3.0 \
@@ -17,7 +17,6 @@ mcs \
     $(find src/Utils -name "*.cs") \
     $(find src/Models -name "*.cs") \
     $(find src/Config -name "*.cs")
-
 
 if [ $? -eq 0 ]; then
 	echo "Build successful! -> build/HyprScribe.exe"

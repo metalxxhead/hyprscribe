@@ -516,13 +516,9 @@ namespace LightweightJson
 
                         if (low >= 0xDC00 && low <= 0xDFFF)
                         {
-                            //int full = 0x10000 + (((code - 0xD800) << 10) | (low - 0xDC00));
-                            // convert to UTF-16 surrogate pair string then return first char via Append later
-                            // easiest: return as string from caller, but our signature returns char.
-                            // We'll return replacement char here and instead append via string.
-                            // So: move logic to return string:
-                            // (We’ll handle this by backing out; see below.)
-                            //Index = save; // fallback
+                            int full = 0x10000 + (((code - 0xD800) << 10) | (low - 0xDC00));
+
+                            Index = save; // fallback
                         }
                         else
                         {

@@ -9,6 +9,7 @@ using System.Security.Principal;
 using LightweightJson;
 using HyprScribe.Utils;
 using System.ComponentModel.Design;
+using System.Diagnostics;
 
 namespace HyprScribe.UI
 {
@@ -91,11 +92,12 @@ namespace HyprScribe.UI
             newTabItem.Activated += (s, e) => SaveWindowSize(this);
             menu.Append(newTabItem);
 
-            var closeTabItem = new MenuItem("Close Tab");
-            closeTabItem.Activated += (s, e) => CloseCurrentTab();
-            menu.Append(closeTabItem);
-
             menu.Append(new SeparatorMenuItem());
+
+            var saveCurrentTabItem = new MenuItem("Save As (Current Tab Only)...");
+            saveCurrentTabItem.Activated += (s, e) => Handlers.MainHandlers.saveTabBufferToFile(notebook, this);
+            menu.Append(saveCurrentTabItem);
+
 
             var quitItem = new MenuItem("Quit");
             quitItem.Activated += (s, e) => Application.Quit();
@@ -162,11 +164,6 @@ namespace HyprScribe.UI
 
             FileUtils.WriteFile(configPath, updatedJson);
             Console.WriteLine("Wrote Window Size to Config");
-        }
-
-        private void CloseCurrentTab()
-        {
-            System.Console.WriteLine("Close tab");
         }
 
     }
