@@ -149,7 +149,8 @@ namespace HyprScribe.Logic
 
 			Directory.CreateDirectory(archived_tabs_path);
 
-            string[] directories = {
+           
+			string[] directories = {
                 current_tabs_path,
                 archived_tabs_path
             };
@@ -179,6 +180,38 @@ namespace HyprScribe.Logic
 			if (!File.Exists(filePath))
 			{
 				File.Create(filePath).Close();
+			}
+		}
+
+
+
+		public static void ArchiveTab(string filePath)
+		{
+			string userDirectory = getUserDirectory();
+			string currentTabsPath = Path.Combine(userDirectory, "current_tabs");
+			string archivedTabsPath = Path.Combine(userDirectory, "archived_tabs");
+
+			// Check if the file exists and is located in the current_tabs folder
+			if (File.Exists(filePath) && Path.GetDirectoryName(filePath).Equals(currentTabsPath))
+			{
+				string relativePath = Path.GetRelativePath(currentTabsPath, filePath);
+				string destFilePath = Path.Combine(archivedTabsPath, relativePath);
+
+				// Create the destination directory if it doesn't exist
+				string destDir = Path.GetDirectoryName(destFilePath);
+				if (!Directory.Exists(destDir))
+				{
+					Directory.CreateDirectory(destDir);
+				}
+
+				// Move the file to the archived_tabs folder
+				File.Move(filePath, destFilePath);
+
+				Console.WriteLine("File moved from current_tabs to archived_tabs: " + filePath);
+			}
+			else
+			{
+				Console.WriteLine("File not found or not in the current_tabs folder: " + filePath);
 			}
 		}
 

@@ -1,5 +1,6 @@
 using Gtk;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using HyprScribe.Models;
 using System.Security.Cryptography.X509Certificates;
@@ -60,19 +61,12 @@ namespace HyprScribe.UI
 
             List<TabInfo> knownTabs = tabManager.GetAllTabs();
 
-            for (int x = 0; x < knownTabs.Count; x++)
-            {
-                //Console.WriteLine(knownPairs[x].TabIndex + " " + knownPairs[x].TabLabel + " " + knownPairs[x].FilePath);
-                foreach (TabInfo tab in knownTabs)
-                {
-                    if (tab.TabIndex == x)
-                    {
-                        Handlers.MainHandlers.AddKnownTabFromDB(notebook, this, knownTabs[x]);
-                        break;
-                    }
-                }
-            }
+            var orderedTabs = knownTabs.OrderBy(t => t.TabIndex).ToList();
 
+            foreach (var tab in orderedTabs)
+            {
+                Handlers.MainHandlers.AddKnownTabFromDB(notebook, this, tab);
+            }
 
         }
 

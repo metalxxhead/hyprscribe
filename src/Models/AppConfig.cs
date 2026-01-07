@@ -35,12 +35,39 @@ namespace HyprScribe.Models
             Console.WriteLine("Added Tab Label: " + tabLabel + " Index: " + tabIndex + " Path: " + filePath);
         }
 
+        public void RemoveTabFromDb(string filePath)
+        {
+            try
+            {
+                string dbFilePath = Path.Combine(CoreLogic.getUserDirectory(), "tabs.db");
+                string connectionString = "URI=file:" + dbFilePath;
 
-        public void RemoveTabFromList(string tabLabel)
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+
+                    string deleteQuery = "DELETE FROM tabs WHERE file_path = @filePath";
+                    using (var deleteCommand = new SqliteCommand(deleteQuery, connection))
+                    {
+                        deleteCommand.Parameters.AddWithValue("@filePath", filePath);
+                        Console.WriteLine("Executing delete query: " + deleteQuery);
+                        deleteCommand.ExecuteNonQuery();
+                        Console.WriteLine("Tab removed from database with file path: " + filePath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error removing tab from database: " + ex.Message);
+            }
+        }
+
+
+        public void RemoveTabFromList(string tabFilePath)
         {
             for (int x = 0; x < _tabs.Count; x++)
             {
-                if (_tabs[x].TabLabel == tabLabel)
+                if (_tabs[x].FilePath == tabFilePath)
                 {
                     _tabs.RemoveAt(x);
                     break;

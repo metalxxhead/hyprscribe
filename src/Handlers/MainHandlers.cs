@@ -15,7 +15,7 @@ namespace HyprScribe.Handlers
     public static class MainHandlers 
     {
 
-        public static Widget CreateTabLabel(Notebook notebook, string title, MainWindow window)
+        public static Widget CreateTabLabel(Notebook notebook, string title, MainWindow window, string fileSavePath)
         {
             var hbox = new Box(Orientation.Horizontal, 5);
 
@@ -29,9 +29,7 @@ namespace HyprScribe.Handlers
 
             closeButton.Clicked += (sender, e) =>
             {
-                //int page = notebook.CurrentPage;
-                //notebook.RemovePage(page);
-                RemoveTab(notebook, title, window);
+                RemoveTab(notebook, title, window, fileSavePath);
             };
 
             hbox.PackStart(label, true, true, 0);
@@ -42,23 +40,45 @@ namespace HyprScribe.Handlers
         }
 
 
-        internal static void RemoveTab(Notebook notebook, string title, MainWindow window)
+        internal static void RemoveTab(Notebook notebook, string title, MainWindow window, string fileSavePath)
         {
-  			for (int i = 0; i < notebook.NPages; i++)
+            Console.WriteLine("Removing tab with file path: " + fileSavePath);
+
+            List<TabInfo> allTabs = window.tabManager.GetAllTabs();
+            string targetTab = "";
+            int targetIndex = -1;
+            string targetTabText = "";
+
+            foreach (TabInfo ti in allTabs)
+            {
+                if (ti.FilePath == fileSavePath)
+                {
+                    targetTab = ti.FilePath;
+                    targetIndex = ti.TabIndex;
+                    targetTabText = ti.TabLabel;
+                    Console.WriteLine("Target tab found with file path: " + targetTab);
+                    break;
+                }
+            }
+
+ 			for (int i = 0; i < notebook.NPages; i++)
 			{
 
 				var tabLabelBox = notebook.GetTabLabel(notebook.GetNthPage(i));
 				var tabTitleLabel = (Gtk.Label)((Container)tabLabelBox).Children[0];
 				var labelText = tabTitleLabel.LabelProp;
 
-				if (title == labelText)
+				if (labelText == targetTabText)
 				{
 					notebook.RemovePage(i);
-                    window.tabManager.RemoveTabFromList(labelText);
+                    break;
 				}
-			} 
-        }
+			}
 
+            window.tabManager.RemoveTabFromList(targetTab);
+            window.tabManager.RemoveTabFromDb(targetTab);
+            CoreLogic.ArchiveTab(targetTab);
+        }
 
 
 
@@ -74,14 +94,17 @@ namespace HyprScribe.Handlers
 
             int index = GenerateNewIndex(notebook, window);
 
-            var tabLabel = CreateTabLabel(notebook, "Tab " + index, window);
+            string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
+
+            var tabLabel = CreateTabLabel(notebook, "Tab " + index, window, fileSavePath);
 
             int page = notebook.AppendPage(scroller, tabLabel);
-            notebook.SetTabReorderable(scroller, true);
+            notebook.SetTabReorderable(scroller, false);
             notebook.CurrentPage = page;
 
-            string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
+
             window.tabManager.AddTab("Tab " + index, page, fileSavePath);
+
 
             CoreLogic.CreateBlankFileIfNotExists(fileSavePath);
 
@@ -91,10 +114,6 @@ namespace HyprScribe.Handlers
             {
                 File.WriteAllText(fileSavePath, textView.Buffer.Text);
             };
-
-            
-
-            //Logic.CoreLogic.writeTabInfoFile(window);
 
             window.ShowAll();
 
@@ -116,27 +135,19 @@ namespace HyprScribe.Handlers
             var scroller = new ScrolledWindow();
             scroller.Add(textView);
 
-            //int index = GenerateNewIndex(notebook, window);
-
-            var tabLabel = CreateTabLabel(notebook, tabData.TabLabel, window);
+            var tabLabel = CreateTabLabel(notebook, tabData.TabLabel, window, tabData.FilePath);
 
             int page = notebook.AppendPage(scroller, tabLabel);
-            notebook.SetTabReorderable(scroller, true);
+            notebook.SetTabReorderable(scroller, false);
             notebook.CurrentPage = page;
 
-            //string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
-            //window.tabManager.AddTab("Tab " + index, page, fileSavePath);
-
-            //CoreLogic.CreateBlankFileIfNotExists(fileSavePath);
-
-            //window.tabManager.SaveTabsToDb();
 
              textView.KeyReleaseEvent += (sender, args) =>
             {
                 File.WriteAllText(tabData.FilePath, textView.Buffer.Text);
             };
 
-            //Logic.CoreLogic.writeTabInfoFile(window);
+
 
             window.ShowAll();
         }
