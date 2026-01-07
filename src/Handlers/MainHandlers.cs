@@ -8,7 +8,7 @@ using HyprScribe.Models;
 using HyprScribe.UI;
 using HyprScribe.Utils;
 using Internal;
-using Microsoft.Win32.SafeHandles;
+
 
 namespace HyprScribe.Handlers 
 {
@@ -84,9 +84,46 @@ namespace HyprScribe.Handlers
 
         internal static void AddEditorTab(Notebook notebook, MainWindow window)
         {
+            var undoStack = new Stack<string>();
+            var redoStack = new Stack<string>();
+            bool isUndoing = false;
+
             var textView = new TextView
             {
                 WrapMode = WrapMode.WordChar
+            };
+
+            textView.Buffer.Changed += (s, e) =>
+            {
+                if (isUndoing) return;
+                undoStack.Push(textView.Buffer.Text);
+                redoStack.Clear();
+            };
+
+            textView.KeyPressEvent += (sender, args) =>
+            {
+                bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
+                bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
+
+                if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
+                {
+                    isUndoing = true;
+                    redoStack.Push(textView.Buffer.Text);
+                    textView.Buffer.Text = undoStack.Pop();
+                    isUndoing = false;
+                    args.RetVal = true;
+                }
+                else if (ctrl && shift &&
+                        (args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
+                        redoStack.Count > 0)
+                {
+                    isUndoing = true;
+                    undoStack.Push(textView.Buffer.Text);
+                    textView.Buffer.Text = redoStack.Pop();
+                    isUndoing = false;
+                    args.RetVal = true;
+                }
+
             };
 
             var scroller = new ScrolledWindow();
@@ -124,6 +161,11 @@ namespace HyprScribe.Handlers
 
         internal static void AddKnownTabFromDB(Notebook notebook, MainWindow window, TabInfo tabData)
         {
+
+            var undoStack = new Stack<string>();
+            var redoStack = new Stack<string>();
+            bool isUndoing = false;
+
             var textView = new TextView
             {
                 WrapMode = WrapMode.WordChar
@@ -131,6 +173,14 @@ namespace HyprScribe.Handlers
 
             var buffer = textView.Buffer;
             buffer.Text = FileUtils.ReadFile(tabData.FilePath);
+
+
+            textView.Buffer.Changed += (s, e) =>
+            {
+                if (isUndoing) return;
+                undoStack.Push(textView.Buffer.Text);
+                redoStack.Clear();
+            };
 
             var scroller = new ScrolledWindow();
             scroller.Add(textView);
@@ -141,6 +191,31 @@ namespace HyprScribe.Handlers
             notebook.SetTabReorderable(scroller, false);
             notebook.CurrentPage = page;
 
+            textView.KeyPressEvent += (sender, args) =>
+            {
+                bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
+                bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
+
+                if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
+                {
+                    isUndoing = true;
+                    redoStack.Push(textView.Buffer.Text);
+                    textView.Buffer.Text = undoStack.Pop();
+                    isUndoing = false;
+                    args.RetVal = true;
+                }
+                else if (ctrl && shift &&
+                        (args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
+                        redoStack.Count > 0)
+                {
+                    isUndoing = true;
+                    undoStack.Push(textView.Buffer.Text);
+                    textView.Buffer.Text = redoStack.Pop();
+                    isUndoing = false;
+                    args.RetVal = true;
+                }
+
+            };
 
              textView.KeyReleaseEvent += (sender, args) =>
             {
@@ -175,16 +250,6 @@ namespace HyprScribe.Handlers
 			
 		}
 
-
-
-        
-
-
-
-
-
     }
-
-
 
 }

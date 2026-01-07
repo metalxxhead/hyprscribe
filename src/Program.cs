@@ -10,14 +10,14 @@
 	{
 	    static void Main(string[] args)
 	    {
-		var cfg = ConfigManager.LoadConfig();
+			var cfg = ConfigManager.LoadConfig();
 
-		Application.Init();
+			Application.Init();
 
-		var win = new UI.MainWindow(cfg);
-		win.ShowAll();
+			var win = new UI.MainWindow(cfg);
+			win.ShowAll();
 
-		Application.Run();
+			Application.Run();
 	    }
 	}
    }
