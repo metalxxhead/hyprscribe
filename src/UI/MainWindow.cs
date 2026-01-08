@@ -18,6 +18,14 @@ namespace HyprScribe.UI
         public Notebook notebook;
         public TabManager tabManager = new TabManager();
         public Button plusButton; 
+
+
+        // Status bar related
+        public Statusbar statusBar;
+        public uint statusContext;
+        public uint? statusTimeoutId;
+
+
         
 
         public MainWindow() : base("HyprScribe") 
@@ -65,8 +73,28 @@ namespace HyprScribe.UI
                 ShowBorder = false
             };
 
+            var root_vbox = new Box(Orientation.Vertical, 0);
+            Add(root_vbox);
 
-            Add(notebook);
+
+            //Add(notebook);
+            root_vbox.PackStart(notebook, true, true, 0);
+
+            statusBar = new Statusbar();
+
+            // Create a context ID (used for updates)
+            statusContext = statusBar.GetContextId("main");
+
+            root_vbox.PackEnd(statusBar, false, false, 0);
+
+            // Initial message
+            statusBar.Push(statusContext, "Ready");
+            //Handlers.MainHandlers.SetTimedStatus(statusContext, "Test Message!", this, 5000);
+
+
+
+
+
 
             plusButton = new Button("+")
             {
@@ -94,7 +122,7 @@ namespace HyprScribe.UI
 
             menu.Append(new SeparatorMenuItem());
             
-            var saveCurrentTabItem = new MenuItem("Save As (Current Tab Only)...");
+            var saveCurrentTabItem = new MenuItem("Export Current Tab...");
             saveCurrentTabItem.Activated += (s, e) => Handlers.MainHandlers.saveTabBufferToFile(notebook, this);
             menu.Append(saveCurrentTabItem);
 
@@ -170,6 +198,10 @@ namespace HyprScribe.UI
             FileUtils.WriteFile(configPath, updatedJson);
             Console.WriteLine("Wrote Window Size to Config");
         }
+
+
+
+
 
     }
 

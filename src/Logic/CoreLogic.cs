@@ -208,7 +208,7 @@ namespace HyprScribe.Logic
 
 
 
-		public static void ArchiveTab(string filePath)
+		public static void ArchiveTab(string targetTabText, string filePath, MainWindow window)
 		{
 			string userDirectory = getUserDirectory();
 			string currentTabsPath = Path.Combine(userDirectory, "current_tabs");
@@ -231,6 +231,8 @@ namespace HyprScribe.Logic
 				File.Move(filePath, destFilePath);
 
 				Console.WriteLine("File moved from current_tabs to archived_tabs: " + filePath);
+
+				Handlers.MainHandlers.SetTimedStatus(window.statusContext, "Archived " + targetTabText + " to " + filePath, window);
 			}
 			else
 			{

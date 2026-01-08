@@ -77,7 +77,7 @@ namespace HyprScribe.Handlers
 
             window.tabManager.RemoveTabFromList(targetTab);
             window.tabManager.RemoveTabFromDb(targetTab);
-            CoreLogic.ArchiveTab(targetTab);
+            CoreLogic.ArchiveTab(targetTabText, targetTab, window);
         }
 
 
@@ -95,14 +95,10 @@ namespace HyprScribe.Handlers
                 WrapMode = WrapMode.WordChar
             };
 
-            textView.Buffer.Changed += (s, e) =>
-            {
-                if (isUndoing) return;
-                undoStack.Push(textView.Buffer.Text);
-                redoStack.Clear();
 
-                File.WriteAllText(fileSavePath, textView.Buffer.Text);
-            };
+
+
+
 
             textView.KeyPressEvent += (sender, args) =>
             {
@@ -140,6 +136,16 @@ namespace HyprScribe.Handlers
             int page = notebook.AppendPage(scroller, tabLabel);
             notebook.SetTabReorderable(scroller, false);
             notebook.CurrentPage = page;
+
+            textView.Buffer.Changed += (s, e) =>
+            {
+                if (isUndoing) return;
+                undoStack.Push(textView.Buffer.Text);
+                redoStack.Clear();
+
+                File.WriteAllText(fileSavePath, textView.Buffer.Text);
+                SetTimedStatus(window.statusContext, "Saved Tab " + index + " to " + fileSavePath, window);
+            };
 
 
             window.tabManager.AddTab("Tab " + index, page, fileSavePath);
@@ -257,7 +263,6 @@ namespace HyprScribe.Handlers
         internal static void saveTabBufferToFile(Notebook notebook, MainWindow window)
         {
 
-
             int activeIndex = notebook.CurrentPage;
             var scrolledWinTemp = notebook.GetNthPage(activeIndex);
 
@@ -282,12 +287,13 @@ namespace HyprScribe.Handlers
 
                     // Optional defaults
                     dialog.DoOverwriteConfirmation = true;
-                    dialog.CurrentName = "document.txt";
+                    dialog.CurrentName = "";
 
                     if (dialog.Run() == (int)Gtk.ResponseType.Accept)
                     {
                         string filePath = dialog.Filename;
                         File.WriteAllText(filePath, textContent);
+                        SetTimedStatus(window.statusContext, "Exported file to " + filePath, window);
                     }
                     else
                     {
@@ -312,6 +318,37 @@ namespace HyprScribe.Handlers
 
         }
 
+
+        internal static void SetStatus(uint statusContext, string message, MainWindow window)
+        {
+            window.statusBar.Pop(window.statusContext);
+            window.statusBar.Push(window.statusContext, message);
+        }
+
+
+
+        internal static void SetTimedStatus(uint statusContext, string message, MainWindow window, uint durationMs = 5000)
+        {
+            // Cancel any existing timeout
+            if (window.statusTimeoutId.HasValue)
+            {
+                GLib.Source.Remove(window.statusTimeoutId.Value);
+                window.statusTimeoutId = null;
+            }
+
+            // Show the message
+            window.statusBar.Pop(window.statusContext);
+            window.statusBar.Push(window.statusContext, message);
+
+            // Schedule revert to "Ready"
+            window.statusTimeoutId = GLib.Timeout.Add(durationMs, () =>
+            {
+                window.statusBar.Pop(window.statusContext);
+                window.statusBar.Push(window.statusContext, "Ready");
+                window.statusTimeoutId = null;
+                return false; // run once
+            });
+        }
 
 
 

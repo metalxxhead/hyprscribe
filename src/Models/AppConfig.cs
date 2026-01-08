@@ -35,6 +35,7 @@ namespace HyprScribe.Models
             Console.WriteLine("Added Tab Label: " + tabLabel + " Index: " + tabIndex + " Path: " + filePath);
         }
 
+
         public void RemoveTabFromDb(string filePath)
         {
             try
@@ -74,6 +75,8 @@ namespace HyprScribe.Models
                 }
             }
         }
+
+
 
 
 
