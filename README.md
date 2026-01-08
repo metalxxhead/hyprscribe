@@ -1,6 +1,14 @@
 # HyprScribe
 
-HyprScribe is a lightweight, bloat-free application designed to save typed or pasted text immediately without prompting the user for a save location or filename.
+HyprScribe is a lightweight, bloat-free application (currently < 300kb) designed to save typed or pasted text *NOW* without fumbling with save buttons, filenames, or save file dialogs.
+
+## Philosophy
+
+HyprScribe is not a word processor or a notes system.  Its a digital scratchpad.  It exists to preserve creative flow by saving text immediately and reliably, without requiring filenames, folders, or user decisions.
+
+If you need structure or permanent storage, use another tool.
+
+But if you need to write short notes that are reliably saved to disk NOW without interruption, this is for you.
 
 ## Description
 
@@ -23,13 +31,13 @@ HyprScribe is ONLY available for Linux operating systems. It requires Mono & MCS
 
 To install HyprScribe, follow these steps:
 
-# Install Dependencies
+### Install Dependencies
 
 Arch Linux:  pacman -S mono sqlite gtk-sharp-3
 
 Ubuntu:  sudo apt install mono-devel sqlite gtk-sharp3
 
-# Install HyprScribe
+### Install HyprScribe
 
 1. Clone the repository:
 git clone https://github.com/metalxxhead/hyprscribe.git 
@@ -59,7 +67,7 @@ scripts/run.sh
 
 ## General Usage Notes
 
-HyprScribe is NOT a word processor OR a place to store your notes.  Its job is to save your ideas and other important text data QUICK without having to fumble with save buttons or save file dialogs.  Just type and go.  If you need a fresh slate but you have already typed something, just open a new tab!  ONLY close tabs when you want to permanently archive them.  You can still get the data back though, but it will be in the `archived_tabs` folder.
+HyprScribe is NOT a word processor OR a place to store your notes.  Its job is to save your ideas and other important text data NOW without having to fumble with save buttons or save file dialogs.  Just type and go.  If you need a fresh slate but you have already typed something, just open a new tab!  ONLY close tabs when you want to permanently archive them.  You can still get the data back though, but it will be in the `archived_tabs` folder.
 
 It is recommended to save whatever data the user wants from the `archived_tabs` folder and the `current_tabs` folder (if any), and then delete the entire `user_data` folder if they want to clean up and start over fresh. No user data is ever saved anywhere else.  The `user_data` folder and its subfolders, as well as `tabs.db` are automatically regenerated, but the program does not re-import files placed in the `current_tabs` directory or reload them into the `tabs.db` file after it has been deleted.
 
