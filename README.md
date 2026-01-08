@@ -8,7 +8,7 @@ HyprScribe is not a word processor or a notes system.  Its a digital scratchpad.
 
 If you need structure or permanent storage, use another tool.
 
-But if you need to write short notes that are reliably saved to disk NOW without thinking, this is for you.
+But if you need to just open an app and write short notes that are reliably saved to disk NOW without thinking, this is for you.
 
 ## Description
 
