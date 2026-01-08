@@ -4,6 +4,11 @@ cd "$(dirname "$0")/.."
 
 echo "Building HyprScribe"
 
+if [ ! -d "build" ]; then
+    mkdir build
+    echo "Build directory created."
+fi
+
 mcs \
     -pkg:gtk-sharp-3.0 \
     -target:exe \

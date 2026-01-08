@@ -516,7 +516,7 @@ namespace LightweightJson
 
                         if (low >= 0xDC00 && low <= 0xDFFF)
                         {
-                            int full = 0x10000 + (((code - 0xD800) << 10) | (low - 0xDC00));
+                            //int full = 0x10000 + (((code - 0xD800) << 10) | (low - 0xDC00));
 
                             Index = save; // fallback
                         }

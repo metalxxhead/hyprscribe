@@ -93,7 +93,7 @@ namespace HyprScribe.UI
             menu.Append(newTabItem);
 
             menu.Append(new SeparatorMenuItem());
-
+            
             var saveCurrentTabItem = new MenuItem("Save As (Current Tab Only)...");
             saveCurrentTabItem.Activated += (s, e) => Handlers.MainHandlers.saveTabBufferToFile(notebook, this);
             menu.Append(saveCurrentTabItem);
@@ -134,6 +134,11 @@ namespace HyprScribe.UI
             foreach (var tab in orderedTabs)
             {
                 Handlers.MainHandlers.AddKnownTabFromDB(notebook, this, tab);
+            }
+
+            if (orderedTabs.Count < 1)
+            {
+                Handlers.MainHandlers.AddEditorTab(notebook, this);
             }
 
         }

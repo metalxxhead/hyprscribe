@@ -88,6 +88,8 @@ namespace HyprScribe.Handlers
             var redoStack = new Stack<string>();
             bool isUndoing = false;
 
+            string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
+
             var textView = new TextView
             {
                 WrapMode = WrapMode.WordChar
@@ -98,6 +100,8 @@ namespace HyprScribe.Handlers
                 if (isUndoing) return;
                 undoStack.Push(textView.Buffer.Text);
                 redoStack.Clear();
+
+                File.WriteAllText(fileSavePath, textView.Buffer.Text);
             };
 
             textView.KeyPressEvent += (sender, args) =>
@@ -131,8 +135,6 @@ namespace HyprScribe.Handlers
 
             int index = GenerateNewIndex(notebook, window);
 
-            string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
-
             var tabLabel = CreateTabLabel(notebook, "Tab " + index, window, fileSavePath);
 
             int page = notebook.AppendPage(scroller, tabLabel);
@@ -147,11 +149,11 @@ namespace HyprScribe.Handlers
 
             window.tabManager.SaveTabsToDb();
 
-             textView.KeyReleaseEvent += (sender, args) =>
+/*              textView.KeyReleaseEvent += (sender, args) =>
             {
                 File.WriteAllText(fileSavePath, textView.Buffer.Text);
             };
-
+ */
             window.ShowAll();
 
             notebook.CurrentPage = page;
@@ -249,6 +251,7 @@ namespace HyprScribe.Handlers
 			return index;
 			
 		}
+
 
 
         internal static void saveTabBufferToFile(Notebook notebook, MainWindow window)
