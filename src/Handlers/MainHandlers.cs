@@ -81,159 +81,175 @@ namespace HyprScribe.Handlers
         }
 
 
+	internal static void AddEditorTab(Notebook notebook, MainWindow window)
+	{
+	    var undoStack = new Stack<string>();
+	    var redoStack = new Stack<string>();
+	    bool isUndoing = false;
 
-        internal static void AddEditorTab(Notebook notebook, MainWindow window)
-        {
-            var undoStack = new Stack<string>();
-            var redoStack = new Stack<string>();
-            bool isUndoing = false;
+	    string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
+	    
+	    int index = GenerateNewIndex(notebook, window);
+	    var tabLabel = CreateTabLabel(
+		notebook,
+		"Tab " + index,
+		window,
+		fileSavePath
+	    );
 
-            string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
+	    var textView = new TextView
+	    {
+		WrapMode = WrapMode.WordChar
+	    };
 
-            var textView = new TextView
-            {
-                WrapMode = WrapMode.WordChar
-            };
+	    // --- BUFFER CHANGED ---
+	    textView.Buffer.Changed += (s, e) =>
+	    {
+		if (isUndoing) return;
 
+		undoStack.Push(textView.Buffer.Text);
+		redoStack.Clear();
 
+		File.WriteAllText(fileSavePath, textView.Buffer.Text);
+		SetTimedStatus(window.statusContext, "Saved Tab " + index + " to " + fileSavePath, window);
+	    };
 
+	    // --- UNDO / REDO ---
+	    textView.KeyPressEvent += (sender, args) =>
+	    {
+		bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
+		bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
 
+		// UNDO (Ctrl+Z)
+		if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
+		{
+		    isUndoing = true;
 
+		    redoStack.Push(textView.Buffer.Text);
+		    textView.Buffer.Text = undoStack.Pop();
 
-            textView.KeyPressEvent += (sender, args) =>
-            {
-                bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
-                bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
+		    isUndoing = false;
+		    args.RetVal = true;
+		}
+		// REDO (Ctrl+Shift+Z)
+		else if (ctrl && shift &&
+			(args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
+			redoStack.Count > 0)
+		{
+		    isUndoing = true;
 
-                if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
-                {
-                    isUndoing = true;
-                    redoStack.Push(textView.Buffer.Text);
-                    textView.Buffer.Text = undoStack.Pop();
-                    isUndoing = false;
-                    args.RetVal = true;
-                }
-                else if (ctrl && shift &&
-                        (args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
-                        redoStack.Count > 0)
-                {
-                    isUndoing = true;
-                    undoStack.Push(textView.Buffer.Text);
-                    textView.Buffer.Text = redoStack.Pop();
-                    isUndoing = false;
-                    args.RetVal = true;
-                }
+		    undoStack.Push(textView.Buffer.Text);
+		    textView.Buffer.Text = redoStack.Pop();
 
-            };
+		    isUndoing = false;
+		    args.RetVal = true;
+		}
+	    };
 
-            var scroller = new ScrolledWindow();
-            scroller.Add(textView);
+	    var scroller = new ScrolledWindow();
+	    scroller.Add(textView);
 
-            int index = GenerateNewIndex(notebook, window);
-
-            var tabLabel = CreateTabLabel(notebook, "Tab " + index, window, fileSavePath);
-
-            int page = notebook.AppendPage(scroller, tabLabel);
-            notebook.SetTabReorderable(scroller, false);
-            notebook.CurrentPage = page;
-
-            textView.Buffer.Changed += (s, e) =>
-            {
-                if (isUndoing) return;
-                undoStack.Push(textView.Buffer.Text);
-                redoStack.Clear();
-
-                File.WriteAllText(fileSavePath, textView.Buffer.Text);
-                SetTimedStatus(window.statusContext, "Saved Tab " + index + " to " + fileSavePath, window);
-            };
-
-
-            window.tabManager.AddTab("Tab " + index, page, fileSavePath);
-
-
-            CoreLogic.CreateBlankFileIfNotExists(fileSavePath);
-
-            window.tabManager.SaveTabsToDb();
-
-/*              textView.KeyReleaseEvent += (sender, args) =>
-            {
-                File.WriteAllText(fileSavePath, textView.Buffer.Text);
-            };
- */
-            window.ShowAll();
-
-            notebook.CurrentPage = page;
-        }
+	    int page = notebook.AppendPage(scroller, tabLabel);
+	    notebook.SetTabReorderable(scroller, false);
 
 
+	    CoreLogic.CreateBlankFileIfNotExists(fileSavePath);
+	    window.tabManager.AddTab("Tab " + index, page, fileSavePath);
+	    window.tabManager.SaveTabsToDb();
 
-        internal static void AddKnownTabFromDB(Notebook notebook, MainWindow window, TabInfo tabData)
-        {
-
-            var undoStack = new Stack<string>();
-            var redoStack = new Stack<string>();
-            bool isUndoing = false;
-
-            var textView = new TextView
-            {
-                WrapMode = WrapMode.WordChar
-            };
-
-            var buffer = textView.Buffer;
-            buffer.Text = FileUtils.ReadFile(tabData.FilePath);
+		
 
 
-            textView.Buffer.Changed += (s, e) =>
-            {
-                if (isUndoing) return;
-                undoStack.Push(textView.Buffer.Text);
-                redoStack.Clear();
-            };
+	    window.ShowAll();
 
-            var scroller = new ScrolledWindow();
-            scroller.Add(textView);
-
-            var tabLabel = CreateTabLabel(notebook, tabData.TabLabel, window, tabData.FilePath);
-
-            int page = notebook.AppendPage(scroller, tabLabel);
-            notebook.SetTabReorderable(scroller, false);
-            notebook.CurrentPage = page;
-
-            textView.KeyPressEvent += (sender, args) =>
-            {
-                bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
-                bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
-
-                if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
-                {
-                    isUndoing = true;
-                    redoStack.Push(textView.Buffer.Text);
-                    textView.Buffer.Text = undoStack.Pop();
-                    isUndoing = false;
-                    args.RetVal = true;
-                }
-                else if (ctrl && shift &&
-                        (args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
-                        redoStack.Count > 0)
-                {
-                    isUndoing = true;
-                    undoStack.Push(textView.Buffer.Text);
-                    textView.Buffer.Text = redoStack.Pop();
-                    isUndoing = false;
-                    args.RetVal = true;
-                }
-
-            };
-
-             textView.KeyReleaseEvent += (sender, args) =>
-            {
-                File.WriteAllText(tabData.FilePath, textView.Buffer.Text);
-            };
+		notebook.CurrentPage = page;
+		textView.GrabFocus();
+	}
 
 
 
-            window.ShowAll();
-        }
+
+	internal static void AddKnownTabFromDB(Notebook notebook, MainWindow window, TabInfo tabData)
+	{
+	    var undoStack = new Stack<string>();
+	    var redoStack = new Stack<string>();
+	    bool isUndoing = false;
+
+	    var textView = new TextView
+	    {
+		WrapMode = WrapMode.WordChar
+	    };
+
+	    // Load file content
+	    textView.Buffer.Text = FileUtils.ReadFile(tabData.FilePath);
+
+	    // --- BUFFER CHANGED ---
+	    textView.Buffer.Changed += (s, e) =>
+	    {
+		if (isUndoing) return;
+
+		undoStack.Push(textView.Buffer.Text);
+		redoStack.Clear();
+
+		File.WriteAllText(tabData.FilePath, textView.Buffer.Text);	
+		SetTimedStatus(window.statusContext, "Saved " + tabData.TabLabel + " to " + tabData.FilePath, window);
+	    };
+
+	    // --- UNDO / REDO ---
+	    textView.KeyPressEvent += (sender, args) =>
+	    {
+		bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
+		bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
+
+		// UNDO (Ctrl+Z)
+		if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
+		{
+		    isUndoing = true;
+
+		    redoStack.Push(textView.Buffer.Text);
+		    textView.Buffer.Text = undoStack.Pop();
+
+		    isUndoing = false;
+		    args.RetVal = true;
+		}
+		// REDO (Ctrl+Shift+Z)
+		else if (ctrl && shift &&
+		        (args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
+		        redoStack.Count > 0)
+		{
+		    isUndoing = true;
+
+		    undoStack.Push(textView.Buffer.Text);
+		    textView.Buffer.Text = redoStack.Pop();
+
+		    isUndoing = false;
+		    args.RetVal = true;
+		}
+	    };
+
+	    var scroller = new ScrolledWindow();
+	    scroller.Add(textView);
+
+	    var tabLabel = CreateTabLabel(
+		notebook,
+		tabData.TabLabel,
+		window,
+		tabData.FilePath
+	    );
+
+	    int page = notebook.AppendPage(scroller, tabLabel);
+	    notebook.SetTabReorderable(scroller, false);
+
+
+
+		textView.GrabFocus();
+
+
+	    window.ShowAll();
+
+		notebook.CurrentPage = page;
+		textView.GrabFocus();
+	}
 
 
 
@@ -327,7 +343,7 @@ namespace HyprScribe.Handlers
 
 
 
-        internal static void SetTimedStatus(uint statusContext, string message, MainWindow window, uint durationMs = 5000)
+        internal static void SetTimedStatus(uint statusContext, string message, MainWindow window, uint durationMs = 500)
         {
             // Cancel any existing timeout
             if (window.statusTimeoutId.HasValue)
