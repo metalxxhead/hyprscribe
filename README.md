@@ -97,7 +97,7 @@ Contributions are welcome! Please submit bug reports, feature requests, or pull 
 ## License
 
 HyprScribe - A quick note taking app
-Copyright (C) 2026  @metalxxhead
+Copyright (C) 2026  http://github.com/metalxxhead
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
