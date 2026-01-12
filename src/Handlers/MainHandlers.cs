@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Principal;
 using Gtk;
+using Gdk;
+using Pango;
 using HyprScribe.Logic;
 using HyprScribe.Models;
 using HyprScribe.UI;
@@ -101,8 +103,15 @@ namespace HyprScribe.Handlers
 
 	    var textView = new TextView
 	    {
-		WrapMode = WrapMode.WordChar
+			WrapMode = Gtk.WrapMode.WordChar,
+			LeftMargin = 40, 
+			RightMargin = 40,
+			TopMargin = 40, 
+			BottomMargin = 30
 	    };
+
+		var fontDesc = FontDescription.FromString("Cantarell 14");
+		textView.ModifyFont(fontDesc);
 
 	    // --- BUFFER CHANGED ---
 	    textView.Buffer.Changed += (s, e) =>
@@ -179,8 +188,15 @@ namespace HyprScribe.Handlers
 
 	    var textView = new TextView
 	    {
-		WrapMode = WrapMode.WordChar
+			WrapMode = Gtk.WrapMode.WordChar,
+			LeftMargin = 40, 
+			RightMargin = 40,
+			TopMargin = 40, 
+			BottomMargin = 30
 	    };
+
+		var fontDesc = FontDescription.FromString("Cantarell 14");
+		textView.ModifyFont(fontDesc);
 
 	    // Load file content
 	    textView.Buffer.Text = FileUtils.ReadFile(tabData.FilePath);

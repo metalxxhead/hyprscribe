@@ -28,6 +28,8 @@ namespace HyprScribe.UI
         public uint? statusTimeoutId;
 
 
+
+
         
 
         public MainWindow() : base("HyprScribe") 
@@ -81,6 +83,8 @@ namespace HyprScribe.UI
 
             //Add(notebook);
             root_vbox.PackStart(notebook, true, true, 0);
+
+
 
             statusBar = new Statusbar();
 
@@ -152,6 +156,9 @@ namespace HyprScribe.UI
 
             ShowAll();
 
+
+
+
             tabManager.PurgeUnnecessaryEntries();
 
             tabManager.LoadTabsFromDb();
@@ -171,7 +178,13 @@ namespace HyprScribe.UI
                 Handlers.MainHandlers.AddEditorTab(notebook, this);
             }
 
+
+
         }
+
+
+
+
 
 
         private void SaveWindowSize(MainWindow window)
