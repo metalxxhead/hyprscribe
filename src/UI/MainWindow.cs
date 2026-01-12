@@ -27,7 +27,13 @@ namespace HyprScribe.UI
         public uint statusContext;
         public uint? statusTimeoutId;
 
-
+        public Gtk.Label emptyLabel = new Label
+        { 
+            LabelProp = "No tabs open\nClick + to create one",
+            Justify = Justification.Center,
+            Xalign = 0.5f,
+            Yalign = 0.5f
+        };
 
 
         
@@ -77,12 +83,30 @@ namespace HyprScribe.UI
                 ShowBorder = false
             };
 
+
+            notebook.PageRemoved += (s, e) => UpdateEmptyState();
+            notebook.PageAdded += (s, e) => UpdateEmptyState();
+
             var root_vbox = new Box(Orientation.Vertical, 0);
             Add(root_vbox);
 
 
+            emptyLabel.Opacity = 0.6;
+
+            var overlay = new Overlay();
+            overlay.Add(notebook);
+            overlay.AddOverlay(emptyLabel);
+
+            //overlay.SetOverlayPassThrough(emptyLabel, true);
+
+            emptyLabel.NoShowAll = true;
+            emptyLabel.Hide();
+
+
             //Add(notebook);
-            root_vbox.PackStart(notebook, true, true, 0);
+            //root_vbox.PackStart(notebook, true, true, 0);
+            root_vbox.PackStart(overlay, true, true, 0);
+
 
 
 
@@ -178,13 +202,17 @@ namespace HyprScribe.UI
                 Handlers.MainHandlers.AddEditorTab(notebook, this);
             }
 
-
+            //UpdateEmptyState();
+            emptyLabel.Visible = false;
 
         }
 
 
 
-
+        void UpdateEmptyState()
+        {
+            emptyLabel.Visible = notebook.NPages == 0;
+        }
 
 
         private void SaveWindowSize(MainWindow window)

@@ -31,10 +31,33 @@ namespace HyprScribe.Handlers
                 FocusOnClick = false
             };
 
-            closeButton.Clicked += (sender, e) =>
-            {
-                RemoveTab(notebook, title, window, fileSavePath);
-            };
+			closeButton.Clicked += (sender, e) =>
+			{
+				var dialog = new MessageDialog(
+					window,
+					DialogFlags.Modal,
+					MessageType.Question,
+					ButtonsType.None,
+					"Close this tab?"
+				);
+
+				dialog.SecondaryText =
+					"The tab will be moved to archived_tabs and require manual retrieval.  Is that what you want?";
+
+				dialog.AddButton("_Cancel", ResponseType.Cancel);
+				dialog.AddButton("_Close Tab", ResponseType.Accept);
+
+				dialog.DefaultResponse = ResponseType.Cancel;
+
+				var response = (ResponseType)dialog.Run();
+				dialog.Destroy();
+
+				if (response == ResponseType.Accept)
+				{
+					RemoveTab(notebook, title, window, fileSavePath);
+				}
+			};
+
 
             hbox.PackStart(label, true, true, 0);
             hbox.PackStart(closeButton, false, false, 0);
