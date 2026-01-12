@@ -1,6 +1,7 @@
 # HyprScribe
+### Write *now*, deal with files later
 
-HyprScribe is a lightweight, bloat-free application (source AND binary included currently < 300kb) designed to save typed or pasted text *NOW* without fumbling with save buttons, filenames, or save file dialogs.
+HyprScribe is a lightweight, bloat-free application (source AND binary included currently < 300kb) designed to save typed or pasted text to disk *NOW* without fumbling with save buttons, filenames, or save file dialogs.
 
 ## Philosophy
 
@@ -8,7 +9,7 @@ HyprScribe is not a word processor or a notes system.  Its a digital scratchpad.
 
 If you need structure or permanent storage, use another tool.
 
-But if you need to just open an app and write short notes that are reliably saved to disk NOW without thinking, this is for you.
+But if you need to just open an app and jot down short notes, ideas, or important text that gets reliably saved to disk *NOW* without thinking, and you don't want to clutter up your Obsidian vault with little things you probably should have never saved anyway, this app is for you.
 
 ## Description
 
