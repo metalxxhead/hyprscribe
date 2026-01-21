@@ -15,6 +15,7 @@ mcs \
     -out:build/HyprScribe.exe \
     -r:Mono.Data.Sqlite \
     -r:System.Data \
+    -r:Mono.Posix \
     src/Program.cs \
     $(find src/UI -name "*.cs") \
     $(find src/Handlers -name "*.cs") \

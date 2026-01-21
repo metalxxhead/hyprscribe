@@ -148,6 +148,11 @@ namespace HyprScribe.UI
             // --- Menu ---
             var menu = new Menu();
 
+            var openDirItem = new MenuItem("Open User Directory");
+            openDirItem.Activated += (s, e) => OpenUserDirectory();
+            menu.Append(openDirItem);
+
+
             var newTabItem = new MenuItem("Write Window Size to Config");
             newTabItem.Activated += (s, e) => SaveWindowSize(this);
             menu.Append(newTabItem);
@@ -211,6 +216,25 @@ namespace HyprScribe.UI
             //UpdateEmptyState();
             emptyLabel.Visible = false;
 
+        }
+
+
+
+
+
+        public static void OpenUserDirectory()
+        {
+            string path = Logic.CoreLogic.getUserDirectory();
+
+            if (!Directory.Exists(path))
+                return;
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "xdg-open",
+                Arguments = $"\"{path}\"",
+                UseShellExecute = false
+            });
         }
 
 
