@@ -348,9 +348,15 @@ namespace HyprScribe.Handlers
 
                     if (dialog.Run() == (int)Gtk.ResponseType.Accept)
                     {
+						// get tab's label
+						var tabLabelBox = notebook.GetTabLabel(notebook.GetNthPage(activeIndex));
+						var tabTitleLabel = (Gtk.Label)((Container)tabLabelBox).Children[0];
+						var labelText = tabTitleLabel.LabelProp;
+
                         string filePath = dialog.Filename;
                         File.WriteAllText(filePath, textContent);
-                        SetTimedStatus(window.statusContext, "Exported file to " + filePath, window);
+                        //SetTimedStatus(window.statusContext, "Exported file to " + filePath, window);
+						SetTimedStatus(window.statusContext, "Exported " + labelText + " to " + filePath, window, 1500);
                     }
                     else
                     {
