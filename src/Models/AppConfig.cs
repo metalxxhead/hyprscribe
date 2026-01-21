@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 github.com/metalxxhead
+
+
 using System;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 using Mono.Data.Sqlite;
 using System.Data;
@@ -246,6 +249,46 @@ namespace HyprScribe.Models
                 Console.WriteLine("Error accessing the database: " + ex.Message);
             }
         }
+
+
+
+
+        public void SyncTabsFromDirectory(string tabsDirectory)
+        {
+            if (!Directory.Exists(tabsDirectory))
+                return;
+
+            var existingDbPaths = new HashSet<string>(
+                _tabs.Select(t => t.FilePath),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            var filesOnDisk = Directory.GetFiles(tabsDirectory);
+
+            int maxIndex = _tabs.Count > 0
+                ? _tabs.Max(t => t.TabIndex)
+                : -1;
+
+            foreach (var file in filesOnDisk)
+            {
+                if (!existingDbPaths.Contains(file))
+                {
+                    // New file introduced by user
+                    maxIndex++;
+
+                    AddTab(
+                        Path.GetFileName(file),
+                        maxIndex,
+                        file
+                    );
+                }
+            }
+
+            SaveTabsToDb();
+        }
+
+
+
     }
 
 	public class TabInfo

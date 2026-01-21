@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 github.com/metalxxhead
+
 using Gtk;
 using System;
+using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using HyprScribe.Models;
@@ -184,7 +186,8 @@ namespace HyprScribe.UI
 
 
             tabManager.PurgeUnnecessaryEntries();
-
+            tabManager.LoadTabsFromDb();
+            tabManager.SyncTabsFromDirectory(Logic.CoreLogic.getCurrentTabsDirectory());
             tabManager.LoadTabsFromDb();
 
 
@@ -194,6 +197,9 @@ namespace HyprScribe.UI
 
             foreach (var tab in orderedTabs)
             {
+                if (!File.Exists(tab.FilePath))
+                continue;
+
                 Handlers.MainHandlers.AddKnownTabFromDB(notebook, this, tab);
             }
 
