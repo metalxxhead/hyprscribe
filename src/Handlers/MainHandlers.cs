@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 github.com/metalxxhead
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,58 +22,100 @@ namespace HyprScribe.Handlers
 
 
 
-		internal static Widget CreateTabLabel(
-			Notebook notebook,
-			Widget pageWidget,      // ✅ the scroller
-			string initialText,
-			MainWindow window,
-			string filePath
-		)
+	internal static Widget CreateTabLabel(
+		Notebook notebook,
+		Widget pageWidget,
+		string initialText,
+		MainWindow window,
+		string filePath
+	)
+	{
+		// Enforce invariants immediately
+		pageWidget.Data["filePath"] = filePath;
+		pageWidget.Data["tabLabel"] = initialText;
+
+		var box = new Box(Orientation.Horizontal, 6);
+
+		var label = new Label(initialText)
 		{
-			// Ensure metadata exists immediately
-			pageWidget.Data["filePath"] = filePath;
-			pageWidget.Data["tabLabel"] = initialText;
+			Xalign = 0,
+			Ellipsize = Pango.EllipsizeMode.End,
+			WidthChars = 5,
+			MaxWidthChars = 20
+		};
 
-			var box = new Box(Orientation.Horizontal, 6);
+		pageWidget.Data["tabLabelWidget"] = label;
 
-			var label = new Label(initialText)
-			{
-				Ellipsize = Pango.EllipsizeMode.End,
-				Xalign = 0
-			};
+		var closeBtn = new Button("×")
+		{
+			Relief = ReliefStyle.None,
+			FocusOnClick = false
+		};
 
-			label.WidthChars = 5;              // 👈 important
-			label.MaxWidthChars = 20;           // optional but nice
-			label.Ellipsize = Pango.EllipsizeMode.End;
+		closeBtn.Clicked += (s, e) =>
+		{
+			// ---- Confirmation dialog ----
+			var dialog = new MessageDialog(
+				window,
+				DialogFlags.Modal,
+				MessageType.Question,
+				ButtonsType.None,
+				"Archive this tab?"
+			);
+
+			dialog.SecondaryText =
+				"The tab will be moved to archived_tabs and require manual retrieval.\n\n" +
+				"Do you want to archive it now?";
+
+			dialog.AddButton("_Cancel", ResponseType.Cancel);
+			dialog.AddButton("_Archive Tab", ResponseType.Accept);
+			dialog.DefaultResponse = ResponseType.Cancel;
+
+			var response = (ResponseType)dialog.Run();
+			dialog.Destroy();
+
+			if (response != ResponseType.Accept)
+				return;
+
+			// ---- Hard invariants ----
+			if (!(pageWidget.Data["filePath"] is string path))
+				throw new InvalidOperationException("Close tab failed: missing filePath metadata.");
+
+			string tabLabelText =
+				(pageWidget.Data["tabLabel"] as string) ??
+				initialText ??
+				"Untitled";
+
+			// ---- Archive FIRST (so path still exists) ----
+			// Uses your existing routine from the older RemoveTab() flow.
+			Logic.CoreLogic.ArchiveTab(tabLabelText, path, window);
+
+			// ---- Remove from notebook ----
+			int idx = notebook.PageNum(pageWidget);
+			if (idx >= 0)
+				notebook.RemovePage(idx);
+
+			// ---- Update model + DB ----
+			window.tabManager.RemoveTabFromList(path);
+			window.tabManager.RemoveTabFromDb(path);
+
+			// Important: SaveTabsToDb() does not delete stale rows by itself,
+			// but calling it keeps remaining indexes/rows consistent.
+			window.tabManager.SaveTabsToDb();
+
+			// Optional: status
+			SetTimedStatus(window.statusContext, $"Archived {tabLabelText}", window, 1200);
+
+		};
 
 
-			// (Optional but handy) store label widget too
-			pageWidget.Data["tabLabelWidget"] = label;
+		box.PackStart(label, true, true, 0);
+		box.PackStart(closeBtn, false, false, 0);
 
-			var closeBtn = new Button("×")
-			{
-				Relief = ReliefStyle.None,
-				FocusOnClick = false
-			};
+		box.ShowAll();
+		return box;
+	}
 
-			closeBtn.Clicked += (s, e) =>
-			{
-				int idx = notebook.PageNum(pageWidget);
-				if (idx >= 0)
-					notebook.RemovePage(idx);
-
-				// If you also remove from DB here, use filePath (stable)
-				// window.tabManager.RemoveTabFromDb(filePath);
-				// window.tabManager.RemoveTabFromList(filePath);
-				// window.tabManager.SaveTabsToDb();
-			};
-
-			box.PackStart(label, true, true, 0);
-			box.PackStart(closeBtn, false, false, 0);
-
-			box.ShowAll();
-			return box;
-		}
 
 		internal static void SetTabLabel(Widget pageWidget, string newText)
 		{
@@ -131,6 +174,130 @@ namespace HyprScribe.Handlers
         //     hbox.ShowAll();
         //     return hbox;
         // }
+
+		// internal static void SaveNow(string statusMsg, uint durationMs = 500)
+		// {
+		// 	File.WriteAllText(filePath, textView.Buffer.Text ?? "");
+		// 	SetTimedStatus(window.statusContext, statusMsg, window, durationMs);
+		// }
+
+
+
+		internal static void SaveAndStatusFromTextView(TextView textView)
+		{
+			// Walk up the widget tree
+			var scroller = textView.Parent as ScrolledWindow;
+			if (scroller == null)
+				return;
+
+			var notebook = scroller.Parent as Notebook;
+			if (notebook == null)
+				return;
+
+			var window = WindowManager.GetWindowForNotebook(notebook);
+			if (window == null)
+				return;
+
+			string tabLabel =
+				scroller.Data["tabLabel"] as string ?? "Unknown Tab";
+
+			string filePath =
+				scroller.Data["filePath"] as string ?? "Unknown Path";
+
+			// Always save
+			File.WriteAllText(filePath, textView.Buffer.Text);
+
+			// Status message (this is what you wanted back)
+			SetTimedStatus(
+				window.statusContext,
+				$"Saved {tabLabel} → {filePath}",
+				window,
+				800
+			);
+		}
+
+
+
+
+
+		internal static void WireEditorAutosaveUndoRedo(
+			TextView textView,
+			Notebook notebook,
+			MainWindow window,
+			string filePath,
+			Func<string> getTabLabelForStatus // so we can say "Saved Tab X"
+		)
+		{
+			var undoStack = new Stack<string>();
+			var redoStack = new Stack<string>();
+			bool isUndoing = false;
+
+			// Track previous text so undo actually reverts to the prior state.
+			string lastText = textView.Buffer.Text ?? "";
+
+
+			textView.Buffer.Changed += (s, e) =>
+			{
+				string current = textView.Buffer.Text ?? "";
+
+				if (!isUndoing)
+				{
+					undoStack.Push(lastText);
+					redoStack.Clear();
+				}
+
+				lastText = current;
+
+				// 🔥 THIS is the entire save + status logic
+				SaveAndStatusFromTextView(textView);
+			};
+
+
+			// --- UNDO / REDO ---
+			textView.KeyPressEvent += (sender, args) =>
+			{
+				bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
+				bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
+
+				// UNDO (Ctrl+Z)
+				if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
+				{
+					isUndoing = true;
+
+					redoStack.Push(textView.Buffer.Text ?? "");
+					textView.Buffer.Text = undoStack.Pop();
+
+					lastText = textView.Buffer.Text ?? "";
+					isUndoing = false;
+
+					// Changed handler already saved, but giving a clearer status feels nice:
+					SetTimedStatus(window.statusContext, $"Undo: {getTabLabelForStatus()}", window, 700);
+
+					args.RetVal = true;
+					return;
+				}
+
+				// REDO (Ctrl+Shift+Z)
+				if (ctrl && shift &&
+					(args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
+					redoStack.Count > 0)
+				{
+					isUndoing = true;
+
+					undoStack.Push(textView.Buffer.Text ?? "");
+					textView.Buffer.Text = redoStack.Pop();
+
+					lastText = textView.Buffer.Text ?? "";
+					isUndoing = false;
+
+					SetTimedStatus(window.statusContext, $"Redo: {getTabLabelForStatus()}", window, 700);
+
+					args.RetVal = true;
+					return;
+				}
+			};
+		}
+
 
 
         internal static void RemoveTab(Notebook notebook, string title, MainWindow window, string fileSavePath)
@@ -210,64 +377,13 @@ namespace HyprScribe.Handlers
 		var fontDesc = FontDescription.FromString("Cantarell 14");
 		textView.ModifyFont(fontDesc);
 
-	    // --- BUFFER CHANGED ---
-	    textView.Buffer.Changed += (s, e) =>
-	    {
-		if (isUndoing) return;
-
-		undoStack.Push(textView.Buffer.Text);
-		redoStack.Clear();
-
-		File.WriteAllText(fileSavePath, textView.Buffer.Text);
-		//SetTimedStatus(window.statusContext, "Saved Tab " + index + " to " + fileSavePath, window);
-
-			var currentWindow = WindowManager.GetWindowForNotebook(
-				(Notebook)textView.Parent.Parent   // TextView → ScrolledWindow → Notebook
-			);
-
-			if (currentWindow != null)
-			{
-				SetTimedStatus(
-					currentWindow.statusContext,
-					"Saved Tab " + index + " to " + fileSavePath,
-					currentWindow
-				);
-			}
-
-
-	    };
-
-	    // --- UNDO / REDO ---
-	    textView.KeyPressEvent += (sender, args) =>
-	    {
-		bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
-		bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
-
-		// UNDO (Ctrl+Z)
-		if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
-		{
-		    isUndoing = true;
-
-		    redoStack.Push(textView.Buffer.Text);
-		    textView.Buffer.Text = undoStack.Pop();
-
-		    isUndoing = false;
-		    args.RetVal = true;
-		}
-		// REDO (Ctrl+Shift+Z)
-		else if (ctrl && shift &&
-			(args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
-			redoStack.Count > 0)
-		{
-		    isUndoing = true;
-
-		    undoStack.Push(textView.Buffer.Text);
-		    textView.Buffer.Text = redoStack.Pop();
-
-		    isUndoing = false;
-		    args.RetVal = true;
-		}
-	    };
+		WireEditorAutosaveUndoRedo(
+			textView,
+			notebook,
+			window,
+			fileSavePath,
+			() => (string)(scroller.Data["tabLabel"] ?? $"Tab {index}")
+		);
 
 	    
 	    scroller.Add(textView);
@@ -317,67 +433,14 @@ namespace HyprScribe.Handlers
 	    // Load file content
 	    textView.Buffer.Text = FileUtils.ReadFile(tabData.FilePath);
 
-	    // --- BUFFER CHANGED ---
-	    textView.Buffer.Changed += (s, e) =>
-	    {
-		if (isUndoing) return;
+		WireEditorAutosaveUndoRedo(
+			textView,
+			notebook,
+			window,
+			tabData.FilePath,
+			() => tabData.TabLabel
+		);
 
-		undoStack.Push(textView.Buffer.Text);
-		redoStack.Clear();
-
-		File.WriteAllText(tabData.FilePath, textView.Buffer.Text);	
-		//SetTimedStatus(window.statusContext, "Saved " + tabData.TabLabel + " to " + tabData.FilePath, window);
-
-
-			var currentWindow = WindowManager.GetWindowForNotebook(
-				(Notebook)textView.Parent.Parent   // TextView → ScrolledWindow → Notebook
-			);
-
-			if (currentWindow != null)
-			{
-				SetTimedStatus(
-					currentWindow.statusContext,
-					"Saved " + tabData.TabLabel + " to " + tabData.FilePath,
-					currentWindow
-				);
-			}
-
-
-
-
-	    };
-
-	    // --- UNDO / REDO ---
-	    textView.KeyPressEvent += (sender, args) =>
-	    {
-		bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
-		bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
-
-		// UNDO (Ctrl+Z)
-		if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
-		{
-		    isUndoing = true;
-
-		    redoStack.Push(textView.Buffer.Text);
-		    textView.Buffer.Text = undoStack.Pop();
-
-		    isUndoing = false;
-		    args.RetVal = true;
-		}
-		// REDO (Ctrl+Shift+Z)
-		else if (ctrl && shift &&
-		        (args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
-		        redoStack.Count > 0)
-		{
-		    isUndoing = true;
-
-		    undoStack.Push(textView.Buffer.Text);
-		    textView.Buffer.Text = redoStack.Pop();
-
-		    isUndoing = false;
-		    args.RetVal = true;
-		}
-	    };
 
 	    var scroller = new ScrolledWindow();
 	    scroller.Add(textView);

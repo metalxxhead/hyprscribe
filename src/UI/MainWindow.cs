@@ -139,6 +139,13 @@ namespace HyprScribe.UI
             var quitItem = new MenuItem("Quit");
             quitItem.Activated += (s, e) => Application.Quit();
             menu.Append(quitItem);
+            
+            menu.Append(new SeparatorMenuItem());
+            
+            var aboutItem = new MenuItem("About");
+		aboutItem.Activated += (s, e) => ShowAboutDialog(this);
+		menu.Append(aboutItem);
+
 
             menu.ShowAll();
 
@@ -165,6 +172,27 @@ namespace HyprScribe.UI
             // Handle create-window signal for drag-out
             notebook.CreateWindow += OnCreateWindow;
         }
+        
+        
+        
+        private static void ShowAboutDialog(Window parent)
+	{
+	    var about = new AboutDialog
+	    {
+		ProgramName = AppInfo.Name,
+		Version = AppInfo.Version,
+		Comments = "A multi-tabbed auto-saving writing tool.\n\n" +
+			   "This is a development build and may be unstable.",
+		Website = "https://internalstaticvoid.dev/projects/software/hyprscribe/",
+		Copyright = AppInfo.Copyright,
+		TransientFor = parent,
+		Modal = true
+	    };
+
+	    about.Run();
+	    about.Destroy();
+	}
+
 
         // private void LoadInitialTabs()
         // {
@@ -240,7 +268,9 @@ namespace HyprScribe.UI
             var headerBar = (HeaderBar)Titlebar;
             int tabCount = notebook.NPages;
             //headerBar.Title = tabCount > 0 ? $"HyprScribe ({tabCount})" : "HyprScribe";
-            headerBar.Title = "HyprScribe";
+            //headerBar.Title = "HyprScribe";
+            headerBar.Title = $"{AppInfo.Name} ({AppInfo.Version})";
+
         }
 
         private void OnPageRemoved(object sender, PageRemovedArgs args)
@@ -251,7 +281,8 @@ namespace HyprScribe.UI
             var headerBar = (HeaderBar)Titlebar;
             int tabCount = notebook.NPages;
             //headerBar.Title = tabCount > 0 ? $"HyprScribe ({tabCount})" : "HyprScribe";
-            headerBar.Title = "HyprScribe";
+            //headerBar.Title = "HyprScribe";
+            headerBar.Title = $"{AppInfo.Name} ({AppInfo.Version})";
             
             // If this window has no tabs and it's not the only window, close it
             if (tabCount == 0 && WindowManager.GetWindowCount() > 1)

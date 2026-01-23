@@ -1,11 +1,29 @@
 # HyprScribe
 ### Write *now*, deal with files later
 
-HyprScribe is a lightweight, bloat-free application (source AND binary included currently < 300kb) designed to save typed or pasted text to disk *NOW* without fumbling with save buttons, filenames, or save file dialogs.
+HyprScribe is a lightweight, bloat-free scratchpad (source AND binary included currently ~300kb) designed to save typed or pasted text to disk *NOW* without ever once fumbling with save buttons, filenames, or save file dialogs.
+
+- Work in multiple tabs without ever saving
+- Typed/pasted data saves instantly to your HD
+- No filenames/directories required for autosave operation
+- Export saved plaintext files to a custom location when ready
+- Archive (never delete) un-needed tabs by closing them
+- Detatch/Reattach tabs (Dev version only!  Warning:  May be unstable!)
+
+![HyprScribe Screenshot](docs/screenshot.png)
+
+Current Stable Version:  2.5 (Main Branch)
+Current Dev Version:  2.6.0-dev.1 (Dev Branch)
+
+Note:
+Main branch is *theoretically* stable.
+Development happens on the `dev` branch and contains latest updates but may break!
+Expect breakage and rapid iteration espectially on `dev`.
+
 
 ## Philosophy
 
-HyprScribe is not a word processor or a notes system.  Its a digital scratchpad.  It exists to preserve creative flow by saving text immediately and reliably, without requiring filenames, folders, or user decisions.
+HyprScribe is not a word processor or a notes system.  Its a digital scratchpad.  It exists to preserve creative flow by saving text to disk immediately and reliably, without requiring filenames, folders, or user decisions.  HyprScribe is built on the philosophy that while bloat is always unnecessary, the few good things a bloat-free tool does, it should do *extremely well*.
 
 If you need structure or permanent storage, use another tool.
 
