@@ -19,52 +19,118 @@ namespace HyprScribe.Handlers
     public static class MainHandlers 
     {
 
-        public static Widget CreateTabLabel(Notebook notebook, string title, MainWindow window, string fileSavePath)
-        {
-            var hbox = new Box(Orientation.Horizontal, 5);
 
-            var label = new Label(title);
 
-            var closeButton = new Button("×")
-            {
-                Relief = ReliefStyle.None,
-                FocusOnClick = false
-            };
+		internal static Widget CreateTabLabel(
+			Notebook notebook,
+			Widget pageWidget,      // ✅ the scroller
+			string initialText,
+			MainWindow window,
+			string filePath
+		)
+		{
+			// Ensure metadata exists immediately
+			pageWidget.Data["filePath"] = filePath;
+			pageWidget.Data["tabLabel"] = initialText;
 
-			closeButton.Clicked += (sender, e) =>
+			var box = new Box(Orientation.Horizontal, 6);
+
+			var label = new Label(initialText)
 			{
-				var dialog = new MessageDialog(
-					window,
-					DialogFlags.Modal,
-					MessageType.Question,
-					ButtonsType.None,
-					"Close this tab?"
-				);
-
-				dialog.SecondaryText =
-					"The tab will be moved to archived_tabs and require manual retrieval.  Is that what you want?";
-
-				dialog.AddButton("_Cancel", ResponseType.Cancel);
-				dialog.AddButton("_Close Tab", ResponseType.Accept);
-
-				dialog.DefaultResponse = ResponseType.Cancel;
-
-				var response = (ResponseType)dialog.Run();
-				dialog.Destroy();
-
-				if (response == ResponseType.Accept)
-				{
-					RemoveTab(notebook, title, window, fileSavePath);
-				}
+				Ellipsize = Pango.EllipsizeMode.End,
+				Xalign = 0
 			};
 
+			label.WidthChars = 5;              // 👈 important
+			label.MaxWidthChars = 20;           // optional but nice
+			label.Ellipsize = Pango.EllipsizeMode.End;
 
-            hbox.PackStart(label, true, true, 0);
-            hbox.PackStart(closeButton, false, false, 0);
 
-            hbox.ShowAll();
-            return hbox;
-        }
+			// (Optional but handy) store label widget too
+			pageWidget.Data["tabLabelWidget"] = label;
+
+			var closeBtn = new Button("×")
+			{
+				Relief = ReliefStyle.None,
+				FocusOnClick = false
+			};
+
+			closeBtn.Clicked += (s, e) =>
+			{
+				int idx = notebook.PageNum(pageWidget);
+				if (idx >= 0)
+					notebook.RemovePage(idx);
+
+				// If you also remove from DB here, use filePath (stable)
+				// window.tabManager.RemoveTabFromDb(filePath);
+				// window.tabManager.RemoveTabFromList(filePath);
+				// window.tabManager.SaveTabsToDb();
+			};
+
+			box.PackStart(label, true, true, 0);
+			box.PackStart(closeBtn, false, false, 0);
+
+			box.ShowAll();
+			return box;
+		}
+
+		internal static void SetTabLabel(Widget pageWidget, string newText)
+		{
+			pageWidget.Data["tabLabel"] = newText;
+
+			var lbl = pageWidget.Data["tabLabelWidget"] as Label;
+			if (lbl != null)
+				lbl.Text = newText;
+		}
+
+
+
+        // public static Widget CreateTabLabel(Notebook notebook, string title, MainWindow window, string fileSavePath)
+        // {
+        //     var hbox = new Box(Orientation.Horizontal, 5);
+
+        //     var label = new Label(title);
+
+        //     var closeButton = new Button("×")
+        //     {
+        //         Relief = ReliefStyle.None,
+        //         FocusOnClick = false
+        //     };
+
+		// 	closeButton.Clicked += (sender, e) =>
+		// 	{
+		// 		var dialog = new MessageDialog(
+		// 			window,
+		// 			DialogFlags.Modal,
+		// 			MessageType.Question,
+		// 			ButtonsType.None,
+		// 			"Close this tab?"
+		// 		);
+
+		// 		dialog.SecondaryText =
+		// 			"The tab will be moved to archived_tabs and require manual retrieval.  Is that what you want?";
+
+		// 		dialog.AddButton("_Cancel", ResponseType.Cancel);
+		// 		dialog.AddButton("_Close Tab", ResponseType.Accept);
+
+		// 		dialog.DefaultResponse = ResponseType.Cancel;
+
+		// 		var response = (ResponseType)dialog.Run();
+		// 		dialog.Destroy();
+
+		// 		if (response == ResponseType.Accept)
+		// 		{
+		// 			RemoveTab(notebook, title, window, fileSavePath);
+		// 		}
+		// 	};
+
+
+        //     hbox.PackStart(label, true, true, 0);
+        //     hbox.PackStart(closeButton, false, false, 0);
+
+        //     hbox.ShowAll();
+        //     return hbox;
+        // }
 
 
         internal static void RemoveTab(Notebook notebook, string title, MainWindow window, string fileSavePath)
@@ -110,15 +176,23 @@ namespace HyprScribe.Handlers
 
 	internal static void AddEditorTab(Notebook notebook, MainWindow window)
 	{
+
+		Console.WriteLine($"AddEditorTab called - Current stack trace:");
+    	Console.WriteLine(Environment.StackTrace);
+
 	    var undoStack = new Stack<string>();
 	    var redoStack = new Stack<string>();
 	    bool isUndoing = false;
 
 	    string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
+
+		var scroller = new ScrolledWindow();
 	    
 	    int index = GenerateNewIndex(notebook, window);
-	    var tabLabel = CreateTabLabel(
+	    
+		var tabLabel = CreateTabLabel(
 		notebook,
+		scroller,
 		"Tab " + index,
 		window,
 		fileSavePath
@@ -145,7 +219,22 @@ namespace HyprScribe.Handlers
 		redoStack.Clear();
 
 		File.WriteAllText(fileSavePath, textView.Buffer.Text);
-		SetTimedStatus(window.statusContext, "Saved Tab " + index + " to " + fileSavePath, window);
+		//SetTimedStatus(window.statusContext, "Saved Tab " + index + " to " + fileSavePath, window);
+
+			var currentWindow = WindowManager.GetWindowForNotebook(
+				(Notebook)textView.Parent.Parent   // TextView → ScrolledWindow → Notebook
+			);
+
+			if (currentWindow != null)
+			{
+				SetTimedStatus(
+					currentWindow.statusContext,
+					"Saved Tab " + index + " to " + fileSavePath,
+					currentWindow
+				);
+			}
+
+
 	    };
 
 	    // --- UNDO / REDO ---
@@ -180,12 +269,16 @@ namespace HyprScribe.Handlers
 		}
 	    };
 
-	    var scroller = new ScrolledWindow();
+	    
 	    scroller.Add(textView);
 
 	    int page = notebook.AppendPage(scroller, tabLabel);
-	    notebook.SetTabReorderable(scroller, false);
+		scroller.Data["tabLabel"] = $"Tab {index}";
+		scroller.Data["filePath"] = fileSavePath;
 
+	    notebook.SetTabReorderable(scroller, false);
+		//notebook.SetTabReorderable(scroller, true);  // Enable drag and drop
+		notebook.SetTabDetachable(scroller, true);
 
 	    CoreLogic.CreateBlankFileIfNotExists(fileSavePath);
 	    window.tabManager.AddTab("Tab " + index, page, fileSavePath);
@@ -233,7 +326,25 @@ namespace HyprScribe.Handlers
 		redoStack.Clear();
 
 		File.WriteAllText(tabData.FilePath, textView.Buffer.Text);	
-		SetTimedStatus(window.statusContext, "Saved " + tabData.TabLabel + " to " + tabData.FilePath, window);
+		//SetTimedStatus(window.statusContext, "Saved " + tabData.TabLabel + " to " + tabData.FilePath, window);
+
+
+			var currentWindow = WindowManager.GetWindowForNotebook(
+				(Notebook)textView.Parent.Parent   // TextView → ScrolledWindow → Notebook
+			);
+
+			if (currentWindow != null)
+			{
+				SetTimedStatus(
+					currentWindow.statusContext,
+					"Saved " + tabData.TabLabel + " to " + tabData.FilePath,
+					currentWindow
+				);
+			}
+
+
+
+
 	    };
 
 	    // --- UNDO / REDO ---
@@ -271,8 +382,13 @@ namespace HyprScribe.Handlers
 	    var scroller = new ScrolledWindow();
 	    scroller.Add(textView);
 
+		scroller.Data["tabLabel"] = tabData.TabLabel;
+		scroller.Data["filePath"] = tabData.FilePath;
+
+
 	    var tabLabel = CreateTabLabel(
 		notebook,
+		scroller,
 		tabData.TabLabel,
 		window,
 		tabData.FilePath
@@ -280,7 +396,8 @@ namespace HyprScribe.Handlers
 
 	    int page = notebook.AppendPage(scroller, tabLabel);
 	    notebook.SetTabReorderable(scroller, false);
-
+		//notebook.SetTabReorderable(scroller, true);  // Enable drag and drop
+		notebook.SetTabDetachable(scroller, true);
 
 
 		textView.GrabFocus();
@@ -356,7 +473,25 @@ namespace HyprScribe.Handlers
                         string filePath = dialog.Filename;
                         File.WriteAllText(filePath, textContent);
                         //SetTimedStatus(window.statusContext, "Exported file to " + filePath, window);
-						SetTimedStatus(window.statusContext, "Exported " + labelText + " to " + filePath, window, 1500);
+						//SetTimedStatus(window.statusContext, "Exported " + labelText + " to " + filePath, window, 1500);
+
+
+							var currentWindow = WindowManager.GetWindowForNotebook(
+								(Notebook)textView.Parent.Parent   // TextView → ScrolledWindow → Notebook
+							);
+
+							if (currentWindow != null)
+							{
+								SetTimedStatus(
+									currentWindow.statusContext,
+									"Exported " + labelText + " to " + filePath,
+									currentWindow,
+									1500
+								);
+							}
+
+
+
                     }
                     else
                     {
