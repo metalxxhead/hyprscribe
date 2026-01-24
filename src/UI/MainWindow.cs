@@ -11,6 +11,7 @@ using HyprScribe.Logic;
 using HyprScribe.Utils;
 using LightweightJson;
 using System.Diagnostics;
+using Internal;
 //using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HyprScribe.UI
@@ -277,19 +278,52 @@ namespace HyprScribe.UI
         {
             UpdateEmptyState();
             
-            // Update title
-            var headerBar = (HeaderBar)Titlebar;
-            int tabCount = notebook.NPages;
-            //headerBar.Title = tabCount > 0 ? $"HyprScribe ({tabCount})" : "HyprScribe";
-            //headerBar.Title = "HyprScribe";
-            headerBar.Title = $"{AppInfo.Name} ({AppInfo.Version})";
+            // // Update title
+            // //var headerBar = (HeaderBar)Titlebar;
+            // int tabCount = notebook.NPages;
+            // //headerBar.Title = tabCount > 0 ? $"HyprScribe ({tabCount})" : "HyprScribe";
+            // //headerBar.Title = "HyprScribe";
+            // //headerBar.Title = $"{AppInfo.Name} ({AppInfo.Version})";
             
-            // If this window has no tabs and it's not the only window, close it
-            if (tabCount == 0 && WindowManager.GetWindowCount() > 1)
+            // // If this window has no tabs and it's not the only window, close it
+            // if (tabCount == 0 && WindowManager.GetWindowCount() > 1)
+            // {
+            //     Console.WriteLine("Window has no tabs and other windows exist - closing");
+            //     this.Destroy();
+            // }
+
+/*             GLib.Idle.Add(() =>
             {
-                Console.WriteLine("Window has no tabs and other windows exist - closing");
-                this.Destroy();
-            }
+
+                if (notebook.NPages > 0)
+                {
+                    return false;
+                }
+
+                //var otherWindow = WindowManager.GetAnyOtherWindow(this);
+
+                if (otherWindow != null)
+                {
+                    //Console.WriteLine("Empty secondary window - destroying");
+                    //WindowManager.UnregisterWindow(this);
+                    //Destroy();
+                }
+                else
+                {
+                    Console.WriteLine("Last window is empty - leaving it open");
+                    UpdateEmptyState();
+                }
+
+
+
+                return false;
+                
+
+            }); */
+
+
+
+
         }
 
 /*         private void OnWindowDelete(object o, DeleteEventArgs args)
@@ -377,17 +411,18 @@ namespace HyprScribe.UI
                 // Remove from this notebook FIRST
                 notebook.RemovePage(0);
 
-                // Build a NEW tab label that captures the TARGET notebook/window
+                 // Build a NEW tab label that captures the TARGET notebook/window
                 var newTabLabel = Handlers.MainHandlers.CreateTabLabel(
                     targetWindow.notebook,
                     page,
                     tabLabelText,
                     targetWindow,
                     filePath
-                );
+                ); 
 
                 // Append the SAME page widget to target notebook
-                int newIndex = targetWindow.notebook.AppendPage(page, newTabLabel);
+                //int newIndex = 
+                targetWindow.notebook.AppendPage(page, newTabLabel);
 
                 targetWindow.notebook.SetTabDetachable(page, true);
                 targetWindow.notebook.ShowAll();

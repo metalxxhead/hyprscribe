@@ -52,11 +52,76 @@ namespace HyprScribe.Handlers
 			FocusOnClick = false
 		};
 
+		// closeBtn.Clicked += (s, e) =>
+		// {
+		// 	// ---- Confirmation dialog ----
+		// 	var dialog = new MessageDialog(
+		// 		window,
+		// 		DialogFlags.Modal,
+		// 		MessageType.Question,
+		// 		ButtonsType.None,
+		// 		"Archive this tab?"
+		// 	);
+
+		// 	dialog.SecondaryText =
+		// 		"The tab will be moved to archived_tabs and require manual retrieval.\n\n" +
+		// 		"Do you want to archive it now?";
+
+		// 	dialog.AddButton("_Cancel", ResponseType.Cancel);
+		// 	dialog.AddButton("_Archive Tab", ResponseType.Accept);
+		// 	dialog.DefaultResponse = ResponseType.Cancel;
+
+		// 	var response = (ResponseType)dialog.Run();
+		// 	dialog.Destroy();
+
+		// 	if (response != ResponseType.Accept)
+		// 		return;
+
+		// 	// ---- Hard invariants ----
+		// 	if (!(pageWidget.Data["filePath"] is string path))
+		// 		throw new InvalidOperationException("Close tab failed: missing filePath metadata.");
+
+		// 	string tabLabelText =
+		// 		(pageWidget.Data["tabLabel"] as string) ??
+		// 		initialText ??
+		// 		"Untitled";
+
+		// 	// ---- Archive FIRST (so path still exists) ----
+		// 	// Uses your existing routine from the older RemoveTab() flow.
+		// 	Logic.CoreLogic.ArchiveTab(tabLabelText, path, window);
+
+		// 	// ---- Remove from notebook ----
+		// 	int idx = notebook.PageNum(pageWidget);
+		// 	if (idx >= 0)
+		// 		notebook.RemovePage(idx);
+
+		// 	// ---- Update model + DB ----
+		// 	window.tabManager.RemoveTabFromList(path);
+		// 	window.tabManager.RemoveTabFromDb(path);
+
+		// 	// Important: SaveTabsToDb() does not delete stale rows by itself,
+		// 	// but calling it keeps remaining indexes/rows consistent.
+		// 	window.tabManager.SaveTabsToDb();
+
+		// 	// Optional: status
+		// 	SetTimedStatus(window.statusContext, $"Archived {tabLabelText}", window, 1200);
+
+		// };
+
 		closeBtn.Clicked += (s, e) =>
 		{
+			// Resolve CURRENT window dynamically
+			var currentNotebook = pageWidget.Parent as Notebook;
+			if (currentNotebook == null)
+				return;
+
+			var window2 = WindowManager.GetWindowForNotebook(currentNotebook);
+			if (window2 == null)
+				return;
+
 			// ---- Confirmation dialog ----
 			var dialog = new MessageDialog(
-				window,
+				window2,
 				DialogFlags.Modal,
 				MessageType.Question,
 				ButtonsType.None,
@@ -77,36 +142,35 @@ namespace HyprScribe.Handlers
 			if (response != ResponseType.Accept)
 				return;
 
-			// ---- Hard invariants ----
-			if (!(pageWidget.Data["filePath"] is string path))
-				throw new InvalidOperationException("Close tab failed: missing filePath metadata.");
-
+			// ---- Metadata (authoritative) ----
+			string path = pageWidget.Data["filePath"] as string;
 			string tabLabelText =
-				(pageWidget.Data["tabLabel"] as string) ??
-				initialText ??
-				"Untitled";
+				pageWidget.Data["tabLabel"] as string ?? initialText ?? "Untitled";
 
-			// ---- Archive FIRST (so path still exists) ----
-			// Uses your existing routine from the older RemoveTab() flow.
-			Logic.CoreLogic.ArchiveTab(tabLabelText, path, window);
+			if (path == null)
+				throw new InvalidOperationException("Missing filePath on tab widget.");
 
-			// ---- Remove from notebook ----
-			int idx = notebook.PageNum(pageWidget);
+			// ---- Archive FIRST ----
+			Logic.CoreLogic.ArchiveTab(tabLabelText, path, window2);
+
+			// ---- Remove page from the CURRENT notebook ----
+			int idx = currentNotebook.PageNum(pageWidget);
 			if (idx >= 0)
-				notebook.RemovePage(idx);
+				currentNotebook.RemovePage(idx);
 
 			// ---- Update model + DB ----
-			window.tabManager.RemoveTabFromList(path);
-			window.tabManager.RemoveTabFromDb(path);
+			window2.tabManager.RemoveTabFromList(path);
+			window2.tabManager.RemoveTabFromDb(path);
+			window2.tabManager.SaveTabsToDb();
 
-			// Important: SaveTabsToDb() does not delete stale rows by itself,
-			// but calling it keeps remaining indexes/rows consistent.
-			window.tabManager.SaveTabsToDb();
-
-			// Optional: status
-			SetTimedStatus(window.statusContext, $"Archived {tabLabelText}", window, 1200);
-
+			SetTimedStatus(
+				window2.statusContext,
+				$"Archived {tabLabelText}",
+				window2,
+				1200
+			);
 		};
+
 
 
 		box.PackStart(label, true, true, 0);
@@ -207,10 +271,9 @@ namespace HyprScribe.Handlers
 			// Always save
 			File.WriteAllText(filePath, textView.Buffer.Text);
 
-			// Status message (this is what you wanted back)
 			SetTimedStatus(
 				window.statusContext,
-				$"Saved {tabLabel} → {filePath}",
+				$"Saved {tabLabel} to {filePath}",
 				window,
 				800
 			);
@@ -230,7 +293,7 @@ namespace HyprScribe.Handlers
 		{
 			var undoStack = new Stack<string>();
 			var redoStack = new Stack<string>();
-			bool isUndoing = false;
+		    bool isUndoing = false;
 
 			// Track previous text so undo actually reverts to the prior state.
 			string lastText = textView.Buffer.Text ?? "";
@@ -248,7 +311,7 @@ namespace HyprScribe.Handlers
 
 				lastText = current;
 
-				// 🔥 THIS is the entire save + status logic
+				// save + status logic
 				SaveAndStatusFromTextView(textView);
 			};
 
@@ -271,7 +334,7 @@ namespace HyprScribe.Handlers
 					isUndoing = false;
 
 					// Changed handler already saved, but giving a clearer status feels nice:
-					SetTimedStatus(window.statusContext, $"Undo: {getTabLabelForStatus()}", window, 700);
+					//SetTimedStatus(window.statusContext, $"Undo: {getTabLabelForStatus()}", window, 700);
 
 					args.RetVal = true;
 					return;
@@ -290,7 +353,7 @@ namespace HyprScribe.Handlers
 					lastText = textView.Buffer.Text ?? "";
 					isUndoing = false;
 
-					SetTimedStatus(window.statusContext, $"Redo: {getTabLabelForStatus()}", window, 700);
+					//SetTimedStatus(window.statusContext, $"Redo: {getTabLabelForStatus()}", window, 700);
 
 					args.RetVal = true;
 					return;
@@ -344,12 +407,12 @@ namespace HyprScribe.Handlers
 	internal static void AddEditorTab(Notebook notebook, MainWindow window)
 	{
 
-		Console.WriteLine($"AddEditorTab called - Current stack trace:");
-    	Console.WriteLine(Environment.StackTrace);
+		//Console.WriteLine($"AddEditorTab called - Current stack trace:");
+    	//Console.WriteLine(Environment.StackTrace);
 
-	    var undoStack = new Stack<string>();
-	    var redoStack = new Stack<string>();
-	    bool isUndoing = false;
+	    //var undoStack = new Stack<string>();
+	    //var redoStack = new Stack<string>();
+	    //bool isUndoing = false;
 
 	    string fileSavePath = Logic.CoreLogic.GenerateUniqueFileName();
 
@@ -414,9 +477,9 @@ namespace HyprScribe.Handlers
 
 	internal static void AddKnownTabFromDB(Notebook notebook, MainWindow window, TabInfo tabData)
 	{
-	    var undoStack = new Stack<string>();
-	    var redoStack = new Stack<string>();
-	    bool isUndoing = false;
+	    //var undoStack = new Stack<string>();
+	    //var redoStack = new Stack<string>();
+	    //bool isUndoing = false;
 
 	    var textView = new TextView
 	    {
