@@ -280,8 +280,42 @@ namespace HyprScribe.Handlers
 		}
 
 
+		private static void ApplyUndoRedo(TextView textView, string newText)
+		{
+		    // Get the ScrolledWindow's adjustment, not the TextView's
+		    var scroller = textView.Parent as ScrolledWindow;
+		    var vadj = scroller?.Vadjustment;
 
+		    // Save scroll position before the change
+		    double scrollPos = vadj?.Value ?? 0.0;
 
+		    // Save cursor offset
+		    int cursorOffset = textView.Buffer
+			.GetIterAtMark(textView.Buffer.InsertMark).Offset;
+
+		    // Apply text
+		    textView.Buffer.Text = newText;
+
+		    // Restore cursor (clamped to new length)
+		    int safeOffset = Math.Min(cursorOffset, textView.Buffer.CharCount);
+		    textView.Buffer.PlaceCursor(
+			textView.Buffer.GetIterAtOffset(safeOffset));
+
+		    // Restore scroll — defer twice to outlast the status bar relayout
+		    GLib.Idle.Add(() =>
+		    {
+			GLib.Timeout.Add(10, () =>
+			{
+			    if (vadj != null)
+			    {
+				double max = Math.Max(0.0, vadj.Upper - vadj.PageSize);
+				vadj.Value = Math.Min(scrollPos, max);
+			    }
+			    return false; // don't repeat
+			});
+			return false;
+		    });
+		}
 
 		internal static void WireEditorAutosaveUndoRedo(
 			TextView textView,
@@ -294,69 +328,49 @@ namespace HyprScribe.Handlers
 			var undoStack = new Stack<string>();
 			var redoStack = new Stack<string>();
 		    bool isUndoing = false;
-
 			// Track previous text so undo actually reverts to the prior state.
 			string lastText = textView.Buffer.Text ?? "";
-
-
 			textView.Buffer.Changed += (s, e) =>
 			{
 				string current = textView.Buffer.Text ?? "";
-
 				if (!isUndoing)
 				{
 					undoStack.Push(lastText);
 					redoStack.Clear();
 				}
-
 				lastText = current;
-
 				// save + status logic
 				SaveAndStatusFromTextView(textView);
 			};
-
-
 			// --- UNDO / REDO ---
 			textView.KeyPressEvent += (sender, args) =>
 			{
 				bool ctrl  = (args.Event.State & Gdk.ModifierType.ControlMask) != 0;
 				bool shift = (args.Event.State & Gdk.ModifierType.ShiftMask) != 0;
-
 				// UNDO (Ctrl+Z)
 				if (ctrl && !shift && args.Event.Key == Gdk.Key.z && undoStack.Count > 0)
 				{
-					isUndoing = true;
-
-					redoStack.Push(textView.Buffer.Text ?? "");
-					textView.Buffer.Text = undoStack.Pop();
-
-					lastText = textView.Buffer.Text ?? "";
-					isUndoing = false;
-
-					// Changed handler already saved, but giving a clearer status feels nice:
-					//SetTimedStatus(window.statusContext, $"Undo: {getTabLabelForStatus()}", window, 700);
-
-					args.RetVal = true;
-					return;
+				    isUndoing = true;
+				    redoStack.Push(textView.Buffer.Text ?? "");
+				    ApplyUndoRedo(textView, undoStack.Pop());
+				    lastText = textView.Buffer.Text ?? "";
+				    isUndoing = false;
+				    args.RetVal = true;
+				    return;
 				}
 
 				// REDO (Ctrl+Shift+Z)
 				if (ctrl && shift &&
-					(args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
-					redoStack.Count > 0)
+				    (args.Event.Key == Gdk.Key.z || args.Event.Key == Gdk.Key.Z) &&
+				    redoStack.Count > 0)
 				{
-					isUndoing = true;
-
-					undoStack.Push(textView.Buffer.Text ?? "");
-					textView.Buffer.Text = redoStack.Pop();
-
-					lastText = textView.Buffer.Text ?? "";
-					isUndoing = false;
-
-					//SetTimedStatus(window.statusContext, $"Redo: {getTabLabelForStatus()}", window, 700);
-
-					args.RetVal = true;
-					return;
+				    isUndoing = true;
+				    undoStack.Push(textView.Buffer.Text ?? "");
+				    ApplyUndoRedo(textView, redoStack.Pop());
+				    lastText = textView.Buffer.Text ?? "";
+				    isUndoing = false;
+				    args.RetVal = true;
+				    return;
 				}
 			};
 		}

@@ -12,8 +12,8 @@ HyprScribe is a lightweight, bloat-free scratchpad (source AND binary included c
 
 ![HyprScribe Screenshot](docs/screenshot.png)
 
-Current Stable Version:  2.5 (Main Branch)
-Current Dev Version:  2.6.0-dev.1 (Dev Branch)
+Current Stable Version:  2.6.2 (Main Branch)
+Current Dev Version:  2.6.2-dev.0 (Dev Branch)
 
 Note:
 Main branch is *theoretically* stable.
