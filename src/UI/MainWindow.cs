@@ -182,8 +182,8 @@ namespace HyprScribe.UI
 	    {
 		ProgramName = AppInfo.Name,
 		Version = AppInfo.Version,
-		Comments = "A multi-tabbed auto-saving writing tool.\n\n", //+
-			   //"This is a development build and may be unstable.",
+		Comments = "A multi-tabbed auto-saving writing tool.\n\n" +
+			   "This is a development build and may be unstable.",
 		Website = "https://internalstaticvoid.dev/projects/software/hyprscribe/",
 		Copyright = AppInfo.Copyright,
 		TransientFor = parent,
