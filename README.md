@@ -8,7 +8,7 @@ HyprScribe is a lightweight, bloat-free scratchpad (source AND binary included c
 - No filenames/directories required for autosave operation
 - Export saved plaintext files to a custom location when ready
 - Archive (never delete) un-needed tabs by closing them
-- Detatch/Reattach tabs (Dev version only!  Warning:  May be unstable!)
+- Detatch/Reattach tabs
 
 ![HyprScribe Screenshot](docs/screenshot.png)
 
